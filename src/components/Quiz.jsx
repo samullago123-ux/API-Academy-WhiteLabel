@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { shuffle } from '../utils/shuffle'
 import { cn } from '../utils/cn'
 
@@ -10,7 +10,8 @@ export default function Quiz({
   finalButtonText = "Ver Resultado Final →",
   restartButtonText = "🔄 Intentar de nuevo",
   gradientClassName = "accent-indigo-500",
-  primaryClassName = "bg-indigo-500 hover:bg-indigo-400"
+  primaryClassName = "bg-indigo-500 hover:bg-indigo-400",
+  onComplete
 }) {
   const [questions, setQuestions] = useState([]);
   const [current, setCurrent] = useState(0);
@@ -19,11 +20,13 @@ export default function Quiz({
   const [finished, setFinished] = useState(false);
   const [showExplain, setShowExplain] = useState(false);
   const [shuffledOpts, setShuffledOpts] = useState([]);
+  const reportedRef = useRef(false)
 
   useEffect(() => {
     const q = shuffle(questionsBank).slice(0, questionCount);
     setQuestions(q);
     if (q[0]) setShuffledOpts(shuffle(q[0].opts));
+    reportedRef.current = false
   }, [questionsBank, questionCount]);
 
   useEffect(() => {
@@ -56,7 +59,18 @@ export default function Quiz({
     setScore(0);
     setFinished(false);
     setShowExplain(false);
+    reportedRef.current = false
   }
+
+  useEffect(() => {
+    if (!finished) return
+    if (reportedRef.current) return
+    const total = questions.length
+    if (!total) return
+    const pct = Math.round((score / total) * 100)
+    reportedRef.current = true
+    onComplete?.({ score, total, pct })
+  }, [finished, score, questions.length, onComplete])
 
   if (questions.length === 0) return null;
 

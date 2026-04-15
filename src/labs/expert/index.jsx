@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import LabLayout from '../../components/LabLayout.jsx'
 import Quiz from '../../components/Quiz.jsx'
 import DesignPatternsLesson from './lessons/DesignPatternsLesson.jsx'
@@ -10,6 +10,8 @@ import PerformanceLesson from './lessons/PerformanceLesson.jsx'
 import RealWorldLesson from './lessons/RealWorldLesson.jsx'
 import SecurityLesson from './lessons/SecurityLesson.jsx'
 import { ALL_QUESTIONS } from './questions.js'
+import { loadLabProgress, recordQuizAttempt, saveLabProgress } from '../../services/progressStore.js'
+import { trackEvent } from '../../services/analytics.js'
 
 const LESSONS = [
   { id: 'design', title: 'API Design Patterns', icon: '🏛️', desc: 'REST maduro, HATEOAS y diseño profesional' },
@@ -23,13 +25,27 @@ const LESSONS = [
   { id: 'quiz', title: 'Quiz Experto', icon: '🏆', desc: '20 preguntas de nivel senior' },
 ]
 
+const DEFAULT_PROGRESS = { activeLesson: 'design', visited: ['design'], quiz: {} }
+
 export default function ExpertAPILab() {
-  const [activeLesson, setActiveLesson] = useState('design')
-  const [visited, setVisited] = useState(['design'])
+  const [activeLesson, setActiveLesson] = useState(() => loadLabProgress('expert', DEFAULT_PROGRESS).activeLesson)
+  const [visited, setVisited] = useState(() => loadLabProgress('expert', DEFAULT_PROGRESS).visited)
+
+  useEffect(() => {
+    trackEvent('lab_open', { labId: 'expert' })
+  }, [])
+
+  useEffect(() => {
+    saveLabProgress('expert', { activeLesson, visited })
+  }, [activeLesson, visited])
+
+  useEffect(() => {
+    trackEvent(activeLesson === 'quiz' ? 'quiz_view' : 'lesson_view', { labId: 'expert', lessonId: activeLesson })
+  }, [activeLesson])
 
   function navigate(id) {
     setActiveLesson(id)
-    if (!visited.includes(id)) setVisited([...visited, id])
+    setVisited((prev) => (prev.includes(id) ? prev : [...prev, id]))
   }
 
   function renderLesson() {
@@ -65,6 +81,10 @@ export default function ExpertAPILab() {
             restartButtonText="🔄 Quiz nuevo (preguntas aleatorias)"
             gradientClassName="accent-red-500"
             primaryClassName="bg-indigo-500 hover:bg-indigo-400"
+            onComplete={({ score, total, pct }) => {
+              recordQuizAttempt('expert', { score, total, pct, at: Date.now() })
+              trackEvent('quiz_complete', { labId: 'expert', score, total, pct })
+            }}
           />
         )
       default:

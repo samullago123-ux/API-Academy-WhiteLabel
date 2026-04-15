@@ -1,0 +1,135 @@
+export const THEMES = {
+  default: {
+    'zinc-50': '250 250 250',
+    'zinc-100': '244 244 245',
+    'zinc-200': '228 228 231',
+    'zinc-300': '212 212 216',
+    'zinc-400': '161 161 170',
+    'zinc-500': '113 113 122',
+    'zinc-600': '82 82 91',
+    'zinc-700': '63 63 70',
+    'zinc-800': '39 39 42',
+    'zinc-900': '24 24 27',
+    'zinc-950': '9 9 11',
+    'indigo-200': '199 210 254',
+    'indigo-300': '165 180 252',
+    'indigo-400': '129 140 248',
+    'indigo-500': '99 102 241',
+    'sky-200': '186 230 253',
+    'sky-300': '125 211 252',
+    'sky-400': '56 189 248',
+    'sky-500': '14 165 233',
+    'emerald-200': '167 243 208',
+    'emerald-300': '110 231 183',
+    'emerald-400': '52 211 153',
+    'emerald-500': '16 185 129',
+    'amber-200': '253 230 138',
+    'amber-300': '252 211 77',
+    'amber-400': '251 191 36',
+    'amber-500': '245 158 11',
+    'red-200': '254 202 202',
+    'red-300': '252 165 165',
+    'red-400': '248 113 113',
+    'red-500': '239 68 68',
+    'violet-200': '221 214 254',
+    'violet-300': '196 181 253',
+    'violet-400': '167 139 250',
+    'violet-500': '139 92 246',
+    'fuchsia-200': '245 208 254',
+    'fuchsia-300': '240 171 252',
+    'fuchsia-400': '232 121 249',
+    'fuchsia-500': '217 70 239',
+    'pink-200': '251 207 232',
+    'pink-300': '249 168 212',
+    'pink-400': '244 114 182',
+    'pink-500': '236 72 153',
+    'cyan-200': '165 243 252',
+    'cyan-300': '103 232 249',
+    'cyan-400': '34 211 238',
+    'cyan-500': '6 182 212',
+    'orange-200': '254 215 170',
+    'orange-300': '253 186 116',
+    'orange-400': '251 146 60',
+    'orange-500': '249 115 22',
+  },
+  ocean: {
+    'zinc-50': '248 250 252',
+    'zinc-100': '241 245 249',
+    'zinc-200': '226 232 240',
+    'zinc-300': '203 213 225',
+    'zinc-400': '148 163 184',
+    'zinc-500': '100 116 139',
+    'zinc-600': '71 85 105',
+    'zinc-700': '51 65 85',
+    'zinc-800': '30 41 59',
+    'zinc-900': '15 23 42',
+    'zinc-950': '2 6 23',
+    'indigo-200': '165 243 252',
+    'indigo-300': '103 232 249',
+    'indigo-400': '34 211 238',
+    'indigo-500': '6 182 212',
+    'sky-200': '199 210 254',
+    'sky-300': '165 180 252',
+    'sky-400': '129 140 248',
+    'sky-500': '99 102 241',
+    'emerald-200': '167 243 208',
+    'emerald-300': '110 231 183',
+    'emerald-400': '52 211 153',
+    'emerald-500': '16 185 129',
+    'amber-200': '254 215 170',
+    'amber-300': '253 186 116',
+    'amber-400': '251 146 60',
+    'amber-500': '249 115 22',
+    'red-200': '254 202 202',
+    'red-300': '252 165 165',
+    'red-400': '248 113 113',
+    'red-500': '239 68 68',
+    'violet-200': '221 214 254',
+    'violet-300': '196 181 253',
+    'violet-400': '167 139 250',
+    'violet-500': '139 92 246',
+    'fuchsia-200': '245 208 254',
+    'fuchsia-300': '240 171 252',
+    'fuchsia-400': '232 121 249',
+    'fuchsia-500': '217 70 239',
+    'pink-200': '251 207 232',
+    'pink-300': '249 168 212',
+    'pink-400': '244 114 182',
+    'pink-500': '236 72 153',
+    'cyan-200': '199 210 254',
+    'cyan-300': '165 180 252',
+    'cyan-400': '129 140 248',
+    'cyan-500': '99 102 241',
+    'orange-200': '253 230 138',
+    'orange-300': '252 211 77',
+    'orange-400': '251 191 36',
+    'orange-500': '245 158 11',
+  },
+}
+
+export function applyTheme(themeOrTokens) {
+  if (typeof document === 'undefined') return
+  const tokens = typeof themeOrTokens === 'string' ? THEMES[themeOrTokens] : themeOrTokens
+  if (!tokens) return
+
+  const root = document.documentElement
+  if (typeof themeOrTokens === 'string') root.dataset.theme = themeOrTokens
+  else root.dataset.theme = 'custom'
+
+  for (const [name, value] of Object.entries(tokens)) {
+    root.style.setProperty(`--${name}`, value)
+  }
+}
+
+export function initTheme() {
+  if (typeof window === 'undefined') return
+
+  const storedName = window.localStorage.getItem('wl:theme')
+  const fromEnv = import.meta?.env?.VITE_THEME
+  const name = storedName || window.__WL_THEME__ || fromEnv || 'default'
+  applyTheme(name)
+
+  if (window.__WL_THEME_TOKENS__ && typeof window.__WL_THEME_TOKENS__ === 'object') {
+    applyTheme(window.__WL_THEME_TOKENS__)
+  }
+}

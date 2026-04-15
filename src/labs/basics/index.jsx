@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import LabLayout from '../../components/LabLayout.jsx'
 import Quiz from '../../components/Quiz.jsx'
 import AnatomyLesson from './lessons/AnatomyLesson.jsx'
@@ -8,6 +8,8 @@ import MethodsLesson from './lessons/MethodsLesson.jsx'
 import PlaygroundLesson from './lessons/PlaygroundLesson.jsx'
 import StatusLesson from './lessons/StatusLesson.jsx'
 import { ALL_QUESTIONS } from './questions.js'
+import { loadLabProgress, recordQuizAttempt, saveLabProgress } from '../../services/progressStore.js'
+import { trackEvent } from '../../services/analytics.js'
 
 const LESSONS = [
   { id: 'anatomy', title: 'Anatomía de un Request', icon: '🔬', desc: 'Entendé cada pieza de una petición HTTP' },
@@ -19,13 +21,27 @@ const LESSONS = [
   { id: 'quiz', title: 'Quiz Final', icon: '🏆', desc: 'Poné a prueba lo aprendido' },
 ]
 
+const DEFAULT_PROGRESS = { activeLesson: 'anatomy', visited: ['anatomy'], quiz: {} }
+
 export default function APILearningLab() {
-  const [activeLesson, setActiveLesson] = useState('anatomy')
-  const [visited, setVisited] = useState(['anatomy'])
+  const [activeLesson, setActiveLesson] = useState(() => loadLabProgress('basics', DEFAULT_PROGRESS).activeLesson)
+  const [visited, setVisited] = useState(() => loadLabProgress('basics', DEFAULT_PROGRESS).visited)
+
+  useEffect(() => {
+    trackEvent('lab_open', { labId: 'basics' })
+  }, [])
+
+  useEffect(() => {
+    saveLabProgress('basics', { activeLesson, visited })
+  }, [activeLesson, visited])
+
+  useEffect(() => {
+    trackEvent(activeLesson === 'quiz' ? 'quiz_view' : 'lesson_view', { labId: 'basics', lessonId: activeLesson })
+  }, [activeLesson])
 
   function navigate(id) {
     setActiveLesson(id)
-    if (!visited.includes(id)) setVisited([...visited, id])
+    setVisited((prev) => (prev.includes(id) ? prev : [...prev, id]))
   }
 
   function renderLesson() {
@@ -51,6 +67,10 @@ export default function APILearningLab() {
               high: '¡Excelente! Dominás los fundamentos.',
               medium: '¡Bien! Repasá los conceptos que fallaste.',
               low: 'Necesitás repasar. Volvé a las lecciones.',
+            }}
+            onComplete={({ score, total, pct }) => {
+              recordQuizAttempt('basics', { score, total, pct, at: Date.now() })
+              trackEvent('quiz_complete', { labId: 'basics', score, total, pct })
             }}
           />
         )

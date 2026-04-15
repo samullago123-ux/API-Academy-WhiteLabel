@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import LabLayout from '../../components/LabLayout.jsx'
 import Quiz from '../../components/Quiz.jsx'
 import ErrorsLesson from './lessons/ErrorsLesson.jsx'
@@ -10,6 +10,8 @@ import RateLimitLesson from './lessons/RateLimitLesson.jsx'
 import VersioningLesson from './lessons/VersioningLesson.jsx'
 import WebhooksLesson from './lessons/WebhooksLesson.jsx'
 import { ALL_QUESTIONS } from './questions.js'
+import { loadLabProgress, recordQuizAttempt, saveLabProgress } from '../../services/progressStore.js'
+import { trackEvent } from '../../services/analytics.js'
 
 const LESSONS = [
   { id: 'oauth', title: 'OAuth 2.0', icon: '🔐', desc: 'Flujos de autenticación avanzada' },
@@ -23,13 +25,27 @@ const LESSONS = [
   { id: 'quiz', title: 'Quiz Avanzado', icon: '🏆', desc: '20 preguntas aleatorias' },
 ]
 
+const DEFAULT_PROGRESS = { activeLesson: 'oauth', visited: ['oauth'], quiz: {} }
+
 export default function AdvancedAPILab() {
-  const [activeLesson, setActiveLesson] = useState('oauth')
-  const [visited, setVisited] = useState(['oauth'])
+  const [activeLesson, setActiveLesson] = useState(() => loadLabProgress('advanced', DEFAULT_PROGRESS).activeLesson)
+  const [visited, setVisited] = useState(() => loadLabProgress('advanced', DEFAULT_PROGRESS).visited)
+
+  useEffect(() => {
+    trackEvent('lab_open', { labId: 'advanced' })
+  }, [])
+
+  useEffect(() => {
+    saveLabProgress('advanced', { activeLesson, visited })
+  }, [activeLesson, visited])
+
+  useEffect(() => {
+    trackEvent(activeLesson === 'quiz' ? 'quiz_view' : 'lesson_view', { labId: 'advanced', lessonId: activeLesson })
+  }, [activeLesson])
 
   function navigate(id) {
     setActiveLesson(id)
-    if (!visited.includes(id)) setVisited([...visited, id])
+    setVisited((prev) => (prev.includes(id) ? prev : [...prev, id]))
   }
 
   function renderLesson() {
@@ -64,6 +80,10 @@ export default function AdvancedAPILab() {
             restartButtonText="🔄 Quiz nuevo (preguntas aleatorias)"
             gradientClassName="accent-amber-500"
             primaryClassName="bg-indigo-500 hover:bg-indigo-400"
+            onComplete={({ score, total, pct }) => {
+              recordQuizAttempt('advanced', { score, total, pct, at: Date.now() })
+              trackEvent('quiz_complete', { labId: 'advanced', score, total, pct })
+            }}
           />
         )
       default:
@@ -89,4 +109,3 @@ export default function AdvancedAPILab() {
     </LabLayout>
   )
 }
-
