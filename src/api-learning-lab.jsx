@@ -76,6 +76,15 @@ function simulateAPI(method, endpoint, body = null, headers = {}) {
           } else {
             const idx = fakeDB[resource].findIndex((i) => i.id === id);
             if (idx === -1) resolve({ status: 404, statusText: "Not Found", body: { error: `No existe ${resource} con id ${id}` }, time: delay });
+            else { fakeDB[resource][idx] = { id, ...body }; resolve({ status: 200, statusText: "OK", body: fakeDB[resource][idx], time: delay }); }
+          }
+          break;
+        case "PATCH":
+          if (!id) {
+            resolve({ status: 400, statusText: "Bad Request", body: { error: "Se requiere un ID para modificar" }, time: delay });
+          } else {
+            const idx = fakeDB[resource].findIndex((i) => i.id === id);
+            if (idx === -1) resolve({ status: 404, statusText: "Not Found", body: { error: `No existe ${resource} con id ${id}` }, time: delay });
             else { fakeDB[resource][idx] = { ...fakeDB[resource][idx], ...body }; resolve({ status: 200, statusText: "OK", body: fakeDB[resource][idx], time: delay }); }
           }
           break;
@@ -206,7 +215,7 @@ function MethodsLesson() {
         Los métodos HTTP representan las 4 operaciones fundamentales sobre datos (<strong style={{ color: "#e4e4e7" }}>CRUD</strong>). Tocá cada uno y ejecutá el ejemplo.
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, marginBottom: 24 }}>
         {methods.map((m) => (
           <button key={m.name} onClick={() => { setActiveMethod(m.name); setResult(null); }} style={{
             background: activeMethod === m.name ? m.color + "15" : "transparent",
@@ -576,12 +585,12 @@ function PlaygroundLesson() {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
 
-  const methodColors = { GET: "#10b981", POST: "#3b82f6", PUT: "#f59e0b", DELETE: "#ef4444" };
+  const methodColors = { GET: "#10b981", POST: "#3b82f6", PUT: "#f59e0b", PATCH: "#a855f7", DELETE: "#ef4444" };
 
   async function sendRequest() {
     setLoading(true);
     let parsedBody = null;
-    if (["POST", "PUT"].includes(method)) {
+    if (["POST", "PUT", "PATCH"].includes(method)) {
       try { parsedBody = JSON.parse(body); } catch (e) {
         setResult({ status: 0, statusText: "Parse Error", body: { error: "El body no es JSON válido: " + e.message }, time: 0 });
         setLoading(false);
@@ -641,7 +650,7 @@ function PlaygroundLesson() {
           <div style={{ color: "#3f3f46", fontSize: 11, marginTop: 4 }}>Borrá este campo para ver un error 401 Unauthorized</div>
         </div>
 
-        {["POST", "PUT"].includes(method) && (
+        {["POST", "PUT", "PATCH"].includes(method) && (
           <div>
             <label style={{ color: "#71717a", fontSize: 12, fontWeight: 700, display: "block", marginBottom: 6, letterSpacing: 1 }}>BODY (JSON)</label>
             <textarea
@@ -698,34 +707,59 @@ function PlaygroundLesson() {
   );
 }
 
+function shuffle(arr) {
+  const newArr = [...arr];
+  for (let i = newArr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+  }
+  return newArr;
+}
+
 // ─── QUIZ LESSON ───
-const QUESTIONS = [
-  { q: "¿Qué método HTTP usás para CREAR un recurso nuevo?", opts: ["GET: Obtiene los recursos actuales", "POST: Envía datos para crear el recurso", "PUT: Modifica un recurso parcialmente", "DELETE: Oculta el recurso del sistema"], correct: 1, explain: "POST crea recursos nuevos. Cada POST puede crear un recurso diferente (no es idempotente)." },
-  { q: "Recibís un error 401. ¿Qué significa?", opts: ["El servidor no encontró el recurso solicitado", "No enviaste credenciales válidas de autenticación", "Ocurrió un error interno en el servidor", "Excediste el límite de peticiones permitidas"], correct: 1, explain: "401 = Unauthorized. No proporcionaste credenciales válidas. Diferente de 403 (tenés credenciales pero no permiso)." },
-  { q: "¿Cuál de estos JSON es VÁLIDO?", opts: ["{ nombre: 'test', activo: true }", '{ "nombre": "test", "activo": true }', "{ 'nombre': 'test', 'activo': true }", '{ "nombre": test, "activo": true }'], correct: 1, explain: 'En JSON, las keys y strings SIEMPRE van con comillas dobles (").' },
-  { q: "¿Qué header se usa para indicar el formato del body?", opts: ["Authorization: Bearer <token>", "Content-Type: application/json", "Accept: application/json", "User-Agent: Mozilla/5.0"], correct: 1, explain: "Content-Type dice qué formato ENVÍAS (ej: application/json). Accept dice qué formato QUERÉS recibir." },
-  { q: "Error 404 vs 403: ¿cuál es la diferencia?", opts: ["404 = error del servidor, 403 = error del cliente", "404 = el recurso no existe, 403 = no tenés permiso", "403 = el recurso no existe, 404 = no tenés permiso", "404 = recurso movido, 403 = recurso eliminado"], correct: 1, explain: "404 = el recurso no existe. 403 = existe pero no tenés permiso para accederlo." },
-  { q: "¿Cuál es la diferencia entre PUT y PATCH?", opts: ["PUT crea un recurso nuevo, PATCH solo lo elimina", "PUT reemplaza el recurso entero, PATCH solo partes", "PATCH actualiza datos sincrónicamente, PUT es async", "PUT es más seguro para datos, PATCH es más rápido"], correct: 1, explain: "PUT reemplaza el recurso completo. PATCH actualiza solo los campos que enviás. PUT necesita el objeto completo." },
-  { q: "¿Qué significa que GET es 'idempotente'?", opts: ["Es el método más rápido para obtener información", "Llamarlo una o mil veces produce el mismo estado", "Solo se puede ejecutar una vez por cada sesión", "No requiere autenticación para devolver datos"], correct: 1, explain: "Idempotente = llamarlo 1 vez o 100 da el mismo resultado. GET, PUT y DELETE son idempotentes. POST no." },
-  { q: "Recibís un 429. ¿Qué hacés?", opts: ["Reintentar la petición inmediatamente de forma cíclica", "Implementar exponential backoff y reintentar luego", "Cambiar de endpoint para evadir el bloqueo actual", "Renovar el token de autenticación inmediatamente"], correct: 1, explain: "429 = Too Many Requests (rate limit). La estrategia correcta es exponential backoff: esperar cada vez más entre reintentos." },
+const ALL_QUESTIONS = [
+  { q: "¿Qué método HTTP usás para CREAR un recurso nuevo?", opts: ["GET: Obtiene los recursos actuales", "POST: Envía datos para crear el recurso", "PUT: Modifica un recurso parcialmente", "DELETE: Oculta el recurso del sistema"], correct: "POST: Envía datos para crear el recurso", explain: "POST crea recursos nuevos. Cada POST puede crear un recurso diferente (no es idempotente)." },
+  { q: "Recibís un error 401. ¿Qué significa?", opts: ["El servidor no encontró el recurso solicitado", "No enviaste credenciales válidas de autenticación", "Ocurrió un error interno en el servidor", "Excediste el límite de peticiones permitidas"], correct: "No enviaste credenciales válidas de autenticación", explain: "401 = Unauthorized. No proporcionaste credenciales válidas. Diferente de 403 (tenés credenciales pero no permiso)." },
+  { q: "¿Cuál de estos JSON es VÁLIDO?", opts: ["{ nombre: 'test', activo: true }", '{ "nombre": "test", "activo": true }', "{ 'nombre': 'test', 'activo': true }", '{ "nombre": test, "activo": true }'], correct: '{ "nombre": "test", "activo": true }', explain: 'En JSON, las keys y strings SIEMPRE van con comillas dobles (").' },
+  { q: "¿Qué header se usa para indicar el formato del body?", opts: ["Authorization: Bearer <token>", "Content-Type: application/json", "Accept: application/json", "User-Agent: Mozilla/5.0"], correct: "Content-Type: application/json", explain: "Content-Type dice qué formato ENVÍAS (ej: application/json). Accept dice qué formato QUERÉS recibir." },
+  { q: "Error 404 vs 403: ¿cuál es la diferencia?", opts: ["404 = error del servidor, 403 = error del cliente", "404 = el recurso no existe, 403 = no tenés permiso", "403 = el recurso no existe, 404 = no tenés permiso", "404 = recurso movido, 403 = recurso eliminado"], correct: "404 = el recurso no existe, 403 = no tenés permiso", explain: "404 = el recurso no existe. 403 = existe pero no tenés permiso para accederlo." },
+  { q: "¿Cuál es la diferencia entre PUT y PATCH?", opts: ["PUT crea un recurso nuevo, PATCH solo lo elimina", "PUT reemplaza el recurso entero, PATCH solo partes", "PATCH actualiza datos sincrónicamente, PUT es async", "PUT es más seguro para datos, PATCH es más rápido"], correct: "PUT reemplaza el recurso entero, PATCH solo partes", explain: "PUT reemplaza el recurso completo. PATCH actualiza solo los campos que enviás. PUT necesita el objeto completo." },
+  { q: "¿Qué significa que GET es 'idempotente'?", opts: ["Es el método más rápido para obtener información", "Llamarlo una o mil veces produce el mismo estado", "Solo se puede ejecutar una vez por cada sesión", "No requiere autenticación para devolver datos"], correct: "Llamarlo una o mil veces produce el mismo estado", explain: "Idempotente = llamarlo 1 vez o 100 da el mismo resultado. GET, PUT y DELETE son idempotentes. POST no." },
+  { q: "Recibís un 429. ¿Qué hacés?", opts: ["Reintentar la petición inmediatamente de forma cíclica", "Implementar exponential backoff y reintentar luego", "Cambiar de endpoint para evadir el bloqueo actual", "Renovar el token de autenticación inmediatamente"], correct: "Implementar exponential backoff y reintentar luego", explain: "429 = Too Many Requests (rate limit). La estrategia correcta es exponential backoff: esperar cada vez más entre reintentos." },
+  { q: "¿Cuál es el código de estado para un éxito estándar en GET?", opts: ["200 OK: La solicitud tuvo éxito", "201 Created: El recurso fue creado", "204 No Content: Éxito sin respuesta", "400 Bad Request: Todo correcto"], correct: "200 OK: La solicitud tuvo éxito", explain: "El código 200 indica que la petición se procesó con éxito y el servidor devuelve la información." },
+  { q: "¿Qué hace el método DELETE?", opts: ["Elimina un recurso de forma permanente o lógica", "Oculta el recurso temporalmente al usuario", "Borra el token de autenticación del cliente", "Elimina los encabezados HTTP del request"], correct: "Elimina un recurso de forma permanente o lógica", explain: "DELETE se utiliza para eliminar un recurso. Es idempotente, borrarlo 10 veces seguidas da el mismo resultado (el recurso no existe)." },
+  { q: "¿Qué código indica que el servidor falló internamente?", opts: ["400 Bad Request", "404 Not Found", "500 Internal Server Error", "502 Bad Gateway"], correct: "500 Internal Server Error", explain: "500 indica que ocurrió un error inesperado en el servidor y no pudo procesar la solicitud (ej. error de código, caída de DB)." },
+  { q: "¿Para qué sirve el endpoint en una API?", opts: ["Es el formato de datos de la respuesta", "Es la URL específica donde vive el recurso", "Es el método de autenticación del usuario", "Es el código de estado del servidor"], correct: "Es la URL específica donde vive el recurso", explain: "El endpoint es la ruta (URL) que representa al recurso, por ejemplo: /api/usuarios/1" }
 ];
 
 function QuizLesson() {
+  const [questions, setQuestions] = useState([]);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState(null);
   const [score, setScore] = useState(0);
   const [finished, setFinished] = useState(false);
   const [showExplain, setShowExplain] = useState(false);
+  const [shuffledOpts, setShuffledOpts] = useState([]);
 
-  function selectAnswer(idx) {
+  useEffect(() => {
+    const q = shuffle(ALL_QUESTIONS).slice(0, 8);
+    setQuestions(q);
+    if (q[0]) setShuffledOpts(shuffle(q[0].opts));
+  }, []);
+
+  useEffect(() => {
+    if (questions[current]) setShuffledOpts(shuffle(questions[current].opts));
+  }, [current, questions]);
+
+  function selectAnswer(opt) {
     if (selected !== null) return;
-    setSelected(idx);
+    setSelected(opt);
     setShowExplain(true);
-    if (idx === QUESTIONS[current].correct) setScore(score + 1);
+    if (opt === questions[current].correct) setScore(score + 1);
   }
 
   function nextQuestion() {
-    if (current + 1 >= QUESTIONS.length) {
+    if (current + 1 >= questions.length) {
       setFinished(true);
     } else {
       setCurrent(current + 1);
@@ -735,6 +769,9 @@ function QuizLesson() {
   }
 
   function restart() {
+    const q = shuffle(ALL_QUESTIONS).slice(0, 8);
+    setQuestions(q);
+    if (q[0]) setShuffledOpts(shuffle(q[0].opts));
     setCurrent(0);
     setSelected(null);
     setScore(0);
@@ -742,14 +779,16 @@ function QuizLesson() {
     setShowExplain(false);
   }
 
+  if (questions.length === 0) return null;
+
   if (finished) {
-    const pct = Math.round((score / QUESTIONS.length) * 100);
+    const pct = Math.round((score / questions.length) * 100);
     const emoji = pct >= 80 ? "🏆" : pct >= 60 ? "👍" : "📚";
     const msg = pct >= 80 ? "¡Excelente! Dominás los fundamentos." : pct >= 60 ? "¡Bien! Repasá los conceptos que fallaste." : "Necesitás repasar. Volvé a las lecciones.";
     return (
       <div style={{ textAlign: "center", padding: "40px 20px" }}>
         <div style={{ fontSize: 64, marginBottom: 16 }}>{emoji}</div>
-        <div style={{ color: "#e4e4e7", fontSize: 24, fontWeight: 800, marginBottom: 8 }}>{score}/{QUESTIONS.length}</div>
+        <div style={{ color: "#e4e4e7", fontSize: 24, fontWeight: 800, marginBottom: 8 }}>{score}/{questions.length}</div>
         <div style={{ color: pct >= 80 ? "#10b981" : pct >= 60 ? "#f59e0b" : "#ef4444", fontSize: 48, fontWeight: 900, marginBottom: 12 }}>{pct}%</div>
         <div style={{ color: "#a1a1aa", fontSize: 15, marginBottom: 24 }}>{msg}</div>
         <button onClick={restart} style={{
@@ -762,30 +801,30 @@ function QuizLesson() {
     );
   }
 
-  const q = QUESTIONS[current];
+  const q = questions[current];
 
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <span style={{ color: "#52525b", fontSize: 13 }}>Pregunta {current + 1} de {QUESTIONS.length}</span>
+        <span style={{ color: "#52525b", fontSize: 13 }}>Pregunta {current + 1} de {questions.length}</span>
         <span style={{ color: "#10b981", fontWeight: 700, fontSize: 14 }}>Score: {score}</span>
       </div>
 
       <div style={{ width: "100%", height: 3, background: "#27272a", borderRadius: 2, marginBottom: 24 }}>
-        <div style={{ width: `${((current + 1) / QUESTIONS.length) * 100}%`, height: 3, background: "linear-gradient(90deg, #6366f1, #a78bfa)", borderRadius: 2, transition: "width 0.3s" }} />
+        <div style={{ width: `${((current + 1) / questions.length) * 100}%`, height: 3, background: "linear-gradient(90deg, #6366f1, #a78bfa)", borderRadius: 2, transition: "width 0.3s" }} />
       </div>
 
       <div style={{ color: "#e4e4e7", fontSize: 17, fontWeight: 700, marginBottom: 24, lineHeight: 1.6 }}>{q.q}</div>
 
       <div style={{ display: "grid", gap: 10, marginBottom: 20 }}>
-        {q.opts.map((opt, idx) => {
+        {shuffledOpts.map((opt, idx) => {
           let bg = "#18181b", border = "#27272a", textColor = "#e4e4e7";
           if (selected !== null) {
-            if (idx === q.correct) { bg = "#10b98118"; border = "#10b981"; textColor = "#10b981"; }
-            else if (idx === selected && idx !== q.correct) { bg = "#ef444418"; border = "#ef4444"; textColor = "#ef4444"; }
+            if (opt === q.correct) { bg = "#10b98118"; border = "#10b981"; textColor = "#10b981"; }
+            else if (opt === selected && opt !== q.correct) { bg = "#ef444418"; border = "#ef4444"; textColor = "#ef4444"; }
           }
           return (
-            <button key={idx} onClick={() => selectAnswer(idx)} style={{
+            <button key={idx} onClick={() => selectAnswer(opt)} style={{
               background: bg, border: `2px solid ${border}`, borderRadius: 10, padding: "14px 16px",
               color: textColor, fontSize: 14, cursor: selected !== null ? "default" : "pointer",
               textAlign: "left", fontFamily: opt.includes('{') ? "monospace" : "inherit", transition: "all 0.2s",
@@ -814,7 +853,7 @@ function QuizLesson() {
           background: "#6366f1", color: "#fff", border: "none", borderRadius: 10,
           padding: "12px 24px", fontWeight: 700, fontSize: 14, cursor: "pointer", width: "100%",
         }}>
-          {current + 1 >= QUESTIONS.length ? "Ver Resultado Final →" : "Siguiente →"}
+          {current + 1 >= questions.length ? "Ver Resultado Final →" : "Siguiente →"}
         </button>
       )}
     </div>
