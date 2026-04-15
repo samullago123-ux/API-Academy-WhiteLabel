@@ -197,6 +197,7 @@ function MethodsLesson() {
     { name: "GET", color: "#10b981", emoji: "📖", analogy: "LEER", desc: "Obtener datos sin modificar nada. Idempotente: podés llamarlo 100 veces y el resultado es el mismo.", example: { endpoint: "usuarios", body: null }, realWorld: "Ver tu perfil, cargar una lista de productos, consultar el clima" },
     { name: "POST", color: "#3b82f6", emoji: "✍️", analogy: "CREAR", desc: "Crear un recurso nuevo. NO es idempotente: cada llamada crea algo nuevo.", example: { endpoint: "usuarios", body: { nombre: "Nuevo User", email: "nuevo@test.com", rol: "user" } }, realWorld: "Registrar un usuario, enviar un mensaje, crear una orden" },
     { name: "PUT", color: "#f59e0b", emoji: "🔄", analogy: "ACTUALIZAR", desc: "Reemplazar un recurso completo. Idempotente: actualizarlo 100 veces da el mismo resultado.", example: { endpoint: "usuarios/1", body: { nombre: "Daniel Actualizado", email: "daniel@whitelabel.lat" } }, realWorld: "Editar tu perfil completo, actualizar un producto" },
+    { name: "PATCH", color: "#a855f7", emoji: "🩹", analogy: "MODIFICAR", desc: "Actualizar parcialmente un recurso. Solo enviás los campos que cambian, no todo el objeto completo.", example: { endpoint: "usuarios/1", body: { email: "nuevo@correo.com" } }, realWorld: "Actualizar solo tu foto de perfil o tu contraseña" },
     { name: "DELETE", color: "#ef4444", emoji: "🗑️", analogy: "ELIMINAR", desc: "Borrar un recurso. Idempotente: borrar algo que ya no existe no causa error (en teoría).", example: { endpoint: "productos/3", body: null }, realWorld: "Eliminar un post, cancelar una suscripción, borrar un archivo" },
   ];
 
@@ -613,8 +614,8 @@ function PlaygroundLesson() {
       <div style={{ display: "grid", gap: 12, marginBottom: 20 }}>
         <div>
           <label style={{ color: "#71717a", fontSize: 12, fontWeight: 700, display: "block", marginBottom: 6, letterSpacing: 1 }}>MÉTODO</label>
-          <div style={{ display: "flex", gap: 6 }}>
-            {["GET", "POST", "PUT", "DELETE"].map((m) => (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {["GET", "POST", "PUT", "PATCH", "DELETE"].map((m) => (
               <button key={m} onClick={() => setMethod(m)} style={{
                 background: method === m ? methodColors[m] + "18" : "transparent",
                 border: `2px solid ${method === m ? methodColors[m] : "#27272a"}`,
