@@ -64,16 +64,13 @@ export function Button({ className, variant = 'primary', size = 'md', ...props }
 }
 
 export function ProgressBar({ value, className, barClassName }) {
+  const clamped = Math.max(0, Math.min(100, value ?? 0))
   return (
-    <div className={cn('h-1 w-full rounded-full bg-zinc-800', className)}>
-      <div
-        className={cn(
-          'h-1 rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 transition-[width] duration-500',
-          barClassName,
-        )}
-        style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
-      />
-    </div>
+    <progress
+      max={100}
+      value={clamped}
+      className={cn('h-1 w-full overflow-hidden rounded-full bg-zinc-800 accent-indigo-500', barClassName, className)}
+    />
   )
 }
 

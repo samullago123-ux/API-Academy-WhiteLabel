@@ -9,7 +9,7 @@ export default function Quiz({
   thresholds = { high: 80, medium: 60 },
   finalButtonText = "Ver Resultado Final →",
   restartButtonText = "🔄 Intentar de nuevo",
-  gradientClassName = "bg-gradient-to-r from-indigo-500 to-violet-500",
+  gradientClassName = "accent-indigo-500",
   primaryClassName = "bg-indigo-500 hover:bg-indigo-400"
 }) {
   const [questions, setQuestions] = useState([]);
@@ -103,12 +103,11 @@ export default function Quiz({
         <span className="text-sm font-bold text-emerald-400">Score: {score}</span>
       </div>
 
-      <div className="mb-6 h-1 w-full rounded-full bg-zinc-800">
-        <div
-          className={cn('h-1 rounded-full transition-[width] duration-300', gradientClassName)}
-          style={{ width: `${((current + 1) / questions.length) * 100}%` }}
-        />
-      </div>
+      <progress
+        max={questions.length}
+        value={current + 1}
+        className={cn('mb-6 h-1 w-full overflow-hidden rounded-full bg-zinc-800', gradientClassName)}
+      />
 
       <div className="mb-6 text-base font-bold leading-relaxed text-zinc-100">{q.q}</div>
 
