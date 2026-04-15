@@ -1,20 +1,9 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-
-// ─── UTILS ───
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function getStatusColor(c) {
-  if (c >= 200 && c < 300) return "#10b981";
-  if (c >= 400 && c < 500) return "#f59e0b";
-  return "#ef4444";
-}
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import LabLayout from './components/LabLayout.jsx'
+import Quiz from './components/Quiz.jsx'
+import { shuffle } from './utils/shuffle.js'
+import { cn } from './utils/cn.js'
+import { toneFromHex } from './utils/tone.js'
 
 // ─── LESSONS CONFIG ───
 const LESSONS = [
@@ -109,62 +98,75 @@ function OAuthLesson() {
 
   return (
     <div>
-      <p style={{ color: "#a1a1aa", marginBottom: 20, fontSize: 15, lineHeight: 1.7 }}>
-        OAuth 2.0 no es "un token". Es un <strong style={{ color: "#e4e4e7" }}>protocolo de delegación</strong> — le das permiso a una app para actuar en tu nombre sin darle tu contraseña. Hay 3 flujos principales según el contexto.
+      <p className="mb-5 text-sm leading-relaxed text-zinc-400">
+        OAuth 2.0 no es "un token". Es un <strong className="text-zinc-100">protocolo de delegación</strong> — le das permiso a una app para actuar en tu nombre sin darle tu contraseña. Hay 3 flujos principales según el contexto.
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 24 }}>
+      <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
         {Object.entries(flows).map(([key, f]) => (
-          <button key={key} onClick={() => setActiveFlow(key)} style={{
-            background: activeFlow === key ? "#18181b" : "transparent",
-            border: `2px solid ${activeFlow === key ? "#6366f1" : "#27272a"}`,
-            borderRadius: 12, padding: "14px 10px", cursor: "pointer", textAlign: "center", transition: "all 0.2s",
-          }}>
-            <div style={{ fontSize: 24, marginBottom: 4 }}>{f.icon}</div>
-            <div style={{ color: activeFlow === key ? "#e4e4e7" : "#71717a", fontWeight: 700, fontSize: 12 }}>{f.name}</div>
-            <div style={{ color: "#52525b", fontSize: 10, marginTop: 4 }}>{f.when}</div>
+          <button
+            key={key}
+            onClick={() => setActiveFlow(key)}
+            className={cn(
+              'rounded-xl border-2 px-4 py-4 text-center transition-colors',
+              activeFlow === key ? 'border-indigo-400/70 bg-zinc-900' : 'border-zinc-800 hover:bg-zinc-900',
+            )}
+          >
+            <div className="text-2xl">{f.icon}</div>
+            <div className={cn('mt-1 text-xs font-bold', activeFlow === key ? 'text-zinc-100' : 'text-zinc-500')}>{f.name}</div>
+            <div className="mt-1 text-[10px] text-zinc-600">{f.when}</div>
           </button>
         ))}
       </div>
 
-      <div style={{ background: "#09090b", borderRadius: 12, padding: 20, border: "1px solid #27272a", marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ color: "#a1a1aa", fontSize: 12 }}>
-            <strong style={{ color: "#e4e4e7" }}>Caso real:</strong> {activeFlowData.realWorld}
+      <div className="mb-4 rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="text-xs text-zinc-400">
+            <strong className="text-zinc-100">Caso real:</strong> {activeFlowData.realWorld}
           </div>
-          <button onClick={playAnimation} disabled={playing} style={{
-            background: playing ? "#27272a" : "#6366f1", color: "#fff", border: "none", borderRadius: 8,
-            padding: "8px 16px", fontSize: 12, fontWeight: 700, cursor: playing ? "default" : "pointer",
-          }}>
+          <button
+            onClick={playAnimation}
+            disabled={playing}
+            className={cn(
+              'inline-flex h-9 items-center justify-center rounded-xl px-4 text-xs font-bold text-white transition-colors',
+              playing ? 'cursor-not-allowed bg-zinc-800 text-zinc-500' : 'bg-indigo-500 hover:bg-indigo-400',
+            )}
+          >
             {playing ? "⏳ Reproduciendo..." : "▶ Animar Flujo"}
           </button>
         </div>
 
-        <div style={{ display: "grid", gap: 8 }}>
+        <div className="grid gap-2">
           {activeFlowData.steps.map((s, i) => (
-            <div key={i} style={{
-              background: i <= step ? s.color + "12" : "#18181b",
-              border: `1px solid ${i <= step ? s.color + "44" : "#27272a"}`,
-              borderRadius: 10, padding: "14px 16px",
-              opacity: i <= step ? 1 : 0.35,
-              transform: i === step && playing ? "scale(1.01)" : "scale(1)",
-              transition: "all 0.4s ease",
-              cursor: "pointer",
-            }} onClick={() => { setStep(i); setPlaying(false); clearInterval(timerRef.current); }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                <span style={{
-                  background: s.color + "33", color: s.color, fontSize: 11, fontWeight: 800,
-                  padding: "3px 8px", borderRadius: 6, fontFamily: "monospace",
-                }}>PASO {i + 1}</span>
-                <span style={{ color: s.color, fontWeight: 700, fontSize: 13 }}>{s.actor}</span>
+            <div
+              key={i}
+              onClick={() => {
+                setStep(i)
+                setPlaying(false)
+                clearInterval(timerRef.current)
+              }}
+              className={cn(
+                'cursor-pointer rounded-xl border px-4 py-4 transition-all duration-300',
+                i <= step ? cn(toneFromHex(s.color).bg, toneFromHex(s.color).border) : 'border-zinc-800 bg-zinc-900',
+                i <= step ? 'opacity-100' : 'opacity-40',
+                i === step && playing ? 'scale-[1.01]' : 'scale-100',
+              )}
+            >
+              <div className="mb-2 flex items-center gap-3">
+                <span
+                  className={cn(
+                    'rounded-md px-2 py-1 font-mono text-[11px] font-extrabold tracking-wider',
+                    toneFromHex(s.color).bg,
+                    toneFromHex(s.color).text,
+                  )}
+                >
+                  PASO {i + 1}
+                </span>
+                <span className={cn('text-sm font-bold', toneFromHex(s.color).text)}>{s.actor}</span>
               </div>
-              <div style={{ color: "#e4e4e7", fontSize: 14, fontWeight: 600, marginBottom: 6 }}>{s.action}</div>
+              <div className="mb-2 text-sm font-semibold text-zinc-100">{s.action}</div>
               {i <= step && (
-                <div style={{
-                  background: "#09090b", borderRadius: 6, padding: "8px 12px", marginTop: 6,
-                  fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#a1a1aa",
-                  whiteSpace: "pre-wrap", lineHeight: 1.6, wordBreak: "break-all",
-                }}>
+                <div className="mt-2 whitespace-pre-wrap break-all rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-xs leading-relaxed text-zinc-300">
                   {s.detail}
                 </div>
               )}
@@ -173,18 +175,18 @@ function OAuthLesson() {
         </div>
       </div>
 
-      <div style={{ background: "#18181b", borderRadius: 10, padding: 16, border: "1px solid #27272a" }}>
-        <div style={{ color: "#f59e0b", fontWeight: 700, fontSize: 12, letterSpacing: 1, marginBottom: 10 }}>🔑 CONCEPTOS CLAVE</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+        <div className="mb-3 text-xs font-bold tracking-widest text-amber-400">🔑 CONCEPTOS CLAVE</div>
+        <div className="grid gap-2 sm:grid-cols-2">
           {[
             { term: "Access Token", def: "Credencial de corta vida (~1h) para acceder a recursos. Es como un ticket de cine." },
             { term: "Refresh Token", def: "Credencial de larga vida para obtener nuevos access tokens sin re-autenticar." },
             { term: "Scope", def: "Permisos granulares: 'read:users write:messages'. Principio de mínimo privilegio." },
             { term: "PKCE", def: "Proof Key for Code Exchange. Protege contra interceptación del código en apps sin backend." },
           ].map((c) => (
-            <div key={c.term} style={{ background: "#09090b", borderRadius: 8, padding: 12 }}>
-              <div style={{ color: "#6366f1", fontWeight: 700, fontSize: 13, marginBottom: 4, fontFamily: "monospace" }}>{c.term}</div>
-              <div style={{ color: "#a1a1aa", fontSize: 12, lineHeight: 1.5 }}>{c.def}</div>
+            <div key={c.term} className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3">
+              <div className="mb-1 font-mono text-sm font-bold text-indigo-300">{c.term}</div>
+              <div className="text-sm leading-relaxed text-zinc-400">{c.def}</div>
             </div>
           ))}
         </div>
@@ -273,79 +275,98 @@ function RateLimitLesson() {
 
   return (
     <div>
-      <p style={{ color: "#a1a1aa", marginBottom: 16, fontSize: 15, lineHeight: 1.7 }}>
-        Las APIs limitan cuántas peticiones podés hacer. Si te pasás, recibís <strong style={{ color: "#f59e0b", fontFamily: "monospace" }}>429 Too Many Requests</strong>. La pregunta es: ¿qué hacés cuando eso pasa?
+      <p className="mb-4 text-sm leading-relaxed text-zinc-400">
+        Las APIs limitan cuántas peticiones podés hacer. Si te pasás, recibís{' '}
+        <strong className="font-mono text-amber-300">429 Too Many Requests</strong>. La pregunta es: ¿qué hacés cuando eso pasa?
       </p>
 
-      <div style={{ background: "#09090b", borderRadius: 10, padding: 16, border: "1px solid #27272a", marginBottom: 20 }}>
-        <div style={{ color: "#71717a", fontSize: 12, marginBottom: 8 }}>CONFIGURACIÓN DEL SERVIDOR</div>
-        <div style={{ display: "flex", gap: 20, fontSize: 14 }}>
-          <span style={{ color: "#a1a1aa" }}>Límite: <strong style={{ color: "#e4e4e7" }}>{rateLimit.max} req</strong></span>
-          <span style={{ color: "#a1a1aa" }}>Ventana: <strong style={{ color: "#e4e4e7" }}>{rateLimit.windowSec}s</strong></span>
-          <span style={{ color: "#a1a1aa" }}>Total a enviar: <strong style={{ color: "#e4e4e7" }}>25 requests</strong></span>
+      <div className="mb-5 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+        <div className="mb-2 text-xs text-zinc-500">CONFIGURACIÓN DEL SERVIDOR</div>
+        <div className="flex flex-wrap gap-4 text-sm text-zinc-400">
+          <span>
+            Límite: <strong className="text-zinc-100">{rateLimit.max} req</strong>
+          </span>
+          <span>
+            Ventana: <strong className="text-zinc-100">{rateLimit.windowSec}s</strong>
+          </span>
+          <span>
+            Total a enviar: <strong className="text-zinc-100">25 requests</strong>
+          </span>
         </div>
       </div>
 
-      <div style={{ color: "#71717a", fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>ESTRATEGIA DE REINTENTO</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 20 }}>
+      <div className="mb-2 text-xs font-bold tracking-widest text-zinc-500">ESTRATEGIA DE REINTENTO</div>
+      <div className="mb-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
         {strategies.map((s) => (
-          <button key={s.id} onClick={() => { setStrategy(s.id); reset(); }} style={{
-            background: strategy === s.id ? s.color + "15" : "transparent",
-            border: `2px solid ${strategy === s.id ? s.color : "#27272a"}`,
-            borderRadius: 10, padding: "12px 10px", cursor: "pointer", textAlign: "center",
-          }}>
-            <div style={{ fontSize: 20 }}>{s.icon}</div>
-            <div style={{ color: s.color, fontWeight: 700, fontSize: 12, marginTop: 4 }}>{s.name}</div>
-            <div style={{ color: "#52525b", fontSize: 10, marginTop: 4 }}>{s.desc}</div>
+          <button
+            key={s.id}
+            onClick={() => {
+              setStrategy(s.id)
+              reset()
+            }}
+            className={cn(
+              'rounded-xl border-2 px-4 py-4 text-center transition-colors',
+              strategy === s.id ? cn(toneFromHex(s.color).bg, toneFromHex(s.color).border) : 'border-zinc-800 hover:bg-zinc-900',
+            )}
+          >
+            <div className="text-xl">{s.icon}</div>
+            <div className={cn('mt-1 text-xs font-bold', toneFromHex(s.color).text)}>{s.name}</div>
+            <div className="mt-1 text-[10px] text-zinc-600">{s.desc}</div>
           </button>
         ))}
       </div>
 
-      <button onClick={simulate} disabled={running} style={{
-        background: running ? "#27272a" : "#6366f1", color: "#fff", border: "none", borderRadius: 10,
-        padding: "12px 24px", fontWeight: 700, fontSize: 14, cursor: running ? "default" : "pointer", width: "100%", marginBottom: 20,
-      }}>
+      <button
+        onClick={simulate}
+        disabled={running}
+        className={cn(
+          'mb-5 inline-flex h-11 w-full items-center justify-center rounded-xl px-6 text-sm font-bold text-white transition-colors',
+          running ? 'cursor-not-allowed bg-zinc-800 text-zinc-500' : 'bg-indigo-500 hover:bg-indigo-400',
+        )}
+      >
         {running ? "⏳ Enviando requests..." : "▶ Simular 25 Requests"}
       </button>
 
       {requests.length > 0 && (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 16 }}>
-            <div style={{ background: "#09090b", borderRadius: 8, padding: 12, textAlign: "center", border: "1px solid #27272a" }}>
-              <div style={{ color: "#71717a", fontSize: 11, marginBottom: 4 }}>ENVIADOS</div>
-              <div style={{ color: "#e4e4e7", fontSize: 24, fontWeight: 800 }}>{stats.sent}</div>
+          <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-center">
+              <div className="mb-1 text-[11px] text-zinc-500">ENVIADOS</div>
+              <div className="text-2xl font-black text-zinc-100">{stats.sent}</div>
             </div>
-            <div style={{ background: "#10b98115", borderRadius: 8, padding: 12, textAlign: "center", border: "1px solid #10b98133" }}>
-              <div style={{ color: "#10b981", fontSize: 11, marginBottom: 4 }}>EXITOSOS (200)</div>
-              <div style={{ color: "#10b981", fontSize: 24, fontWeight: 800 }}>{stats.ok}</div>
+            <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-center">
+              <div className="mb-1 text-[11px] text-emerald-300">EXITOSOS (200)</div>
+              <div className="text-2xl font-black text-emerald-300">{stats.ok}</div>
             </div>
-            <div style={{ background: "#ef444415", borderRadius: 8, padding: 12, textAlign: "center", border: "1px solid #ef444433" }}>
-              <div style={{ color: "#ef4444", fontSize: 11, marginBottom: 4 }}>RECHAZADOS (429)</div>
-              <div style={{ color: "#ef4444", fontSize: 24, fontWeight: 800 }}>{stats.throttled}</div>
+            <div className="rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-center">
+              <div className="mb-1 text-[11px] text-red-300">RECHAZADOS (429)</div>
+              <div className="text-2xl font-black text-red-300">{stats.throttled}</div>
             </div>
           </div>
 
-          <div style={{ background: "#09090b", borderRadius: 10, padding: 12, border: "1px solid #27272a", maxHeight: 200, overflowY: "auto" }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+          <div className="max-h-52 overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-950 p-3">
+            <div className="flex flex-wrap gap-1.5">
               {requests.map((r) => (
-                <div key={r.id} style={{
-                  width: 28, height: 28, borderRadius: 6,
-                  background: r.status === 200 ? "#10b98125" : "#ef444425",
-                  border: `1px solid ${r.status === 200 ? "#10b98155" : "#ef444455"}`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 10, fontWeight: 700, color: r.status === 200 ? "#10b981" : "#ef4444",
-                  fontFamily: "monospace",
-                }}>
+                <div
+                  key={r.id}
+                  className={cn(
+                    'flex h-7 w-7 items-center justify-center rounded-lg border font-mono text-[10px] font-extrabold',
+                    r.status === 200 ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-300' : 'border-red-400/40 bg-red-500/10 text-red-300',
+                  )}
+                >
                   {r.status === 200 ? "✓" : "429"}
                 </div>
               ))}
             </div>
           </div>
 
-          <div style={{ background: "#18181b", borderRadius: 10, padding: 16, marginTop: 16, border: "1px solid #27272a" }}>
-            <div style={{ color: "#6366f1", fontWeight: 700, fontSize: 12, marginBottom: 8 }}>📊 ANÁLISIS</div>
-            <div style={{ color: "#a1a1aa", fontSize: 13, lineHeight: 1.7 }}>
-              Tasa de éxito: <strong style={{ color: stats.ok / stats.sent > 0.7 ? "#10b981" : "#ef4444" }}>{Math.round((stats.ok / stats.sent) * 100)}%</strong>
+          <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+            <div className="mb-2 text-xs font-bold text-indigo-300">📊 ANÁLISIS</div>
+            <div className="text-sm leading-relaxed text-zinc-400">
+              Tasa de éxito:{' '}
+              <strong className={stats.ok / stats.sent > 0.7 ? 'text-emerald-300' : 'text-red-300'}>
+                {Math.round((stats.ok / stats.sent) * 100)}%
+              </strong>
               {strategy === "none" && stats.throttled > 5 && " — Sin control, la mayoría de requests se pierden. Desperdicio de recursos."}
               {strategy === "fixed" && " — Mejor que nada, pero el delay fijo no se adapta a la carga."}
               {strategy === "exponential" && " — La mejor estrategia: se adapta dinámicamente y maximiza throughput."}
@@ -354,13 +375,13 @@ function RateLimitLesson() {
         </>
       )}
 
-      <div style={{ background: "#18181b", borderRadius: 10, padding: 16, marginTop: 20, border: "1px solid #27272a" }}>
-        <div style={{ color: "#f59e0b", fontWeight: 700, fontSize: 12, letterSpacing: 1, marginBottom: 10 }}>📬 HEADERS DE RATE LIMIT</div>
-        <div style={{ fontFamily: "monospace", fontSize: 12, color: "#a1a1aa", lineHeight: 2 }}>
-          <span style={{ color: "#6366f1" }}>X-RateLimit-Limit:</span> 100 <span style={{ color: "#52525b" }}>← máximo por ventana</span><br />
-          <span style={{ color: "#6366f1" }}>X-RateLimit-Remaining:</span> 23 <span style={{ color: "#52525b" }}>← cuántas te quedan</span><br />
-          <span style={{ color: "#6366f1" }}>X-RateLimit-Reset:</span> 1625097600 <span style={{ color: "#52525b" }}>← timestamp de reset</span><br />
-          <span style={{ color: "#6366f1" }}>Retry-After:</span> 30 <span style={{ color: "#52525b" }}>← segundos para reintentar</span>
+      <div className="mt-5 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+        <div className="mb-2 text-xs font-bold tracking-widest text-amber-400">📬 HEADERS DE RATE LIMIT</div>
+        <div className="font-mono text-xs leading-loose text-zinc-400">
+          <span className="text-indigo-300">X-RateLimit-Limit:</span> 100 <span className="text-zinc-600">← máximo por ventana</span><br />
+          <span className="text-indigo-300">X-RateLimit-Remaining:</span> 23 <span className="text-zinc-600">← cuántas te quedan</span><br />
+          <span className="text-indigo-300">X-RateLimit-Reset:</span> 1625097600 <span className="text-zinc-600">← timestamp de reset</span><br />
+          <span className="text-indigo-300">Retry-After:</span> 30 <span className="text-zinc-600">← segundos para reintentar</span>
         </div>
       </div>
     </div>
@@ -409,19 +430,25 @@ function IdempotencyLesson() {
 
   return (
     <div>
-      <p style={{ color: "#a1a1aa", marginBottom: 20, fontSize: 15, lineHeight: 1.7 }}>
-        Una operación es <strong style={{ color: "#e4e4e7" }}>idempotente</strong> si ejecutarla 1 vez o 100 veces produce el <strong style={{ color: "#e4e4e7" }}>mismo resultado</strong>. Es CRÍTICO para pagos, transacciones y cualquier cosa que no debería duplicarse.
+      <p className="mb-5 text-sm leading-relaxed text-zinc-400">
+        Una operación es <strong className="text-zinc-100">idempotente</strong> si ejecutarla 1 vez o 100 veces produce el <strong className="text-zinc-100">mismo resultado</strong>. Es CRÍTICO para pagos, transacciones y cualquier cosa que no debería duplicarse.
       </p>
 
-      <div style={{ color: "#71717a", fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>ESCENARIOS INTERACTIVOS</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 24 }}>
+      <div className="mb-2 text-xs font-bold tracking-widest text-zinc-500">ESCENARIOS INTERACTIVOS</div>
+      <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
         {scenarios.map((s) => (
-          <button key={s.id} onClick={() => { setScenario(s.id); setStep(0); }} style={{
-            background: scenario === s.id ? s.color + "12" : "#18181b",
-            border: `2px solid ${scenario === s.id ? s.color : "#27272a"}`,
-            borderRadius: 10, padding: 16, cursor: "pointer", textAlign: "left",
-          }}>
-            <div style={{ color: s.color, fontWeight: 700, fontSize: 14 }}>{s.title}</div>
+          <button
+            key={s.id}
+            onClick={() => {
+              setScenario(s.id)
+              setStep(0)
+            }}
+            className={cn(
+              'rounded-xl border-2 px-4 py-4 text-left transition-colors',
+              scenario === s.id ? cn(toneFromHex(s.color).bg, toneFromHex(s.color).border) : 'border-zinc-800 bg-zinc-900 hover:bg-zinc-800',
+            )}
+          >
+            <div className={cn('text-sm font-bold', toneFromHex(s.color).text)}>{s.title}</div>
           </button>
         ))}
       </div>
@@ -429,47 +456,64 @@ function IdempotencyLesson() {
       {scenario && (() => {
         const s = scenarios.find((x) => x.id === scenario);
         return (
-          <div style={{ background: "#09090b", borderRadius: 10, padding: 20, border: `1px solid ${s.color}33`, marginBottom: 24 }}>
+          <div className={cn('mb-6 rounded-xl border bg-zinc-950 p-5', toneFromHex(s.color).border)}>
             {s.steps.map((st, i) => (
-              <div key={i} onClick={() => setStep(i)} style={{
-                display: "flex", gap: 12, alignItems: "flex-start",
-                padding: "10px 12px", borderRadius: 8, marginBottom: 4, cursor: "pointer",
-                opacity: i <= step ? 1 : 0.3, background: i === step ? s.color + "10" : "transparent",
-                transition: "all 0.3s",
-              }}>
-                <div style={{
-                  minWidth: 24, height: 24, borderRadius: "50%",
-                  background: i <= step ? s.color : "#27272a",
-                  color: i <= step ? "#fff" : "#52525b",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 11, fontWeight: 700,
-                }}>{i + 1}</div>
-                <div style={{ color: i <= step ? "#e4e4e7" : "#52525b", fontSize: 13, lineHeight: 1.6, fontFamily: st.includes("POST") || st.includes("key") ? "monospace" : "inherit" }}>
+              <div
+                key={i}
+                onClick={() => setStep(i)}
+                className={cn(
+                  'mb-1 flex cursor-pointer items-start gap-3 rounded-xl px-3 py-3 transition-colors',
+                  i <= step ? 'opacity-100' : 'opacity-40',
+                  i === step ? toneFromHex(s.color).bg : 'bg-transparent',
+                )}
+              >
+                <div
+                  className={cn(
+                    'flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-extrabold',
+                    i <= step ? cn('text-white', s.color === '#10b981' ? 'bg-emerald-500' : s.color === '#ef4444' ? 'bg-red-500' : 'bg-indigo-500') : 'bg-zinc-800 text-zinc-500',
+                  )}
+                >
+                  {i + 1}
+                </div>
+                <div
+                  className={cn(
+                    'text-sm leading-relaxed',
+                    i <= step ? 'text-zinc-100' : 'text-zinc-500',
+                    st.includes('POST') || st.includes('key') ? 'font-mono' : 'font-sans',
+                  )}
+                >
                   {st}
                 </div>
               </div>
             ))}
             {step < s.steps.length - 1 && (
-              <button onClick={() => setStep(step + 1)} style={{
-                background: s.color + "22", color: s.color, border: `1px solid ${s.color}44`,
-                borderRadius: 8, padding: "8px 20px", fontSize: 13, fontWeight: 700, cursor: "pointer", marginTop: 10,
-              }}>Siguiente paso →</button>
+              <button
+                onClick={() => setStep(step + 1)}
+                className={cn(
+                  'mt-3 inline-flex h-9 items-center justify-center rounded-xl border px-4 text-sm font-bold',
+                  toneFromHex(s.color).bg,
+                  toneFromHex(s.color).border,
+                  toneFromHex(s.color).text,
+                )}
+              >
+                Siguiente paso →
+              </button>
             )}
           </div>
         );
       })()}
 
-      <div style={{ color: "#71717a", fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>TABLA DE IDEMPOTENCIA POR MÉTODO</div>
-      <div style={{ background: "#09090b", borderRadius: 10, overflow: "hidden", border: "1px solid #27272a" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "80px 90px 70px 1fr", gap: 0, padding: "10px 16px", background: "#18181b", fontSize: 11, color: "#52525b", fontWeight: 700 }}>
+      <div className="mb-2 text-xs font-bold tracking-widest text-zinc-500">TABLA DE IDEMPOTENCIA POR MÉTODO</div>
+      <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
+        <div className="grid grid-cols-[80px_90px_70px_1fr] gap-0 bg-zinc-900 px-4 py-2 text-[11px] font-bold text-zinc-500">
           <span>MÉTODO</span><span>IDEMPOTENTE</span><span>SAFE</span><span>NOTA</span>
         </div>
         {methodTable.map((m) => (
-          <div key={m.method} style={{ display: "grid", gridTemplateColumns: "80px 90px 70px 1fr", gap: 0, padding: "10px 16px", borderTop: "1px solid #27272a", alignItems: "center" }}>
-            <span style={{ color: "#6366f1", fontWeight: 700, fontFamily: "monospace", fontSize: 13 }}>{m.method}</span>
-            <span style={{ color: m.idempotent ? "#10b981" : "#ef4444", fontWeight: 700, fontSize: 13 }}>{m.idempotent ? "✅ Sí" : "❌ No"}</span>
-            <span style={{ color: m.safe ? "#10b981" : "#f59e0b", fontSize: 13 }}>{m.safe ? "✅" : "⚠️"}</span>
-            <span style={{ color: "#a1a1aa", fontSize: 12 }}>{m.desc}</span>
+          <div key={m.method} className="grid grid-cols-[80px_90px_70px_1fr] items-center gap-0 border-t border-zinc-800 px-4 py-3">
+            <span className="font-mono text-sm font-bold text-indigo-300">{m.method}</span>
+            <span className={cn('text-sm font-bold', m.idempotent ? 'text-emerald-300' : 'text-red-300')}>{m.idempotent ? "✅ Sí" : "❌ No"}</span>
+            <span className={cn('text-sm', m.safe ? 'text-emerald-300' : 'text-amber-300')}>{m.safe ? "✅" : "⚠️"}</span>
+            <span className="text-sm text-zinc-400">{m.desc}</span>
           </div>
         ))}
       </div>
@@ -545,60 +589,81 @@ function PaginationLesson() {
 
   return (
     <div>
-      <p style={{ color: "#a1a1aa", marginBottom: 20, fontSize: 15, lineHeight: 1.7 }}>
-        Cuando una API tiene miles de registros, no te los manda todos juntos. La <strong style={{ color: "#e4e4e7" }}>paginación</strong> divide los resultados en bloques manejables. Hay 3 estrategias principales.
+      <p className="mb-5 text-sm leading-relaxed text-zinc-400">
+        Cuando una API tiene miles de registros, no te los manda todos juntos. La <strong className="text-zinc-100">paginación</strong> divide los resultados en bloques manejables. Hay 3 estrategias principales.
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 24 }}>
+      <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
         {Object.entries(types).map(([key, t]) => (
-          <button key={key} onClick={() => setPaginationType(key)} style={{
-            background: paginationType === key ? t.color + "15" : "transparent",
-            border: `2px solid ${paginationType === key ? t.color : "#27272a"}`,
-            borderRadius: 10, padding: "14px 10px", cursor: "pointer", textAlign: "center",
-          }}>
-            <div style={{ fontSize: 22 }}>{t.icon}</div>
-            <div style={{ color: t.color, fontWeight: 700, fontSize: 12, marginTop: 4 }}>{t.name}</div>
+          <button
+            key={key}
+            onClick={() => setPaginationType(key)}
+            className={cn(
+              'rounded-xl border-2 px-4 py-4 text-center transition-colors',
+              paginationType === key ? cn(toneFromHex(t.color).bg, toneFromHex(t.color).border) : 'border-zinc-800 hover:bg-zinc-900',
+            )}
+          >
+            <div className="text-2xl">{t.icon}</div>
+            <div className={cn('mt-1 text-xs font-bold', toneFromHex(t.color).text)}>{t.name}</div>
           </button>
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-        <div style={{ background: "#10b98115", borderRadius: 8, padding: 12, border: "1px solid #10b98133" }}>
-          <div style={{ color: "#10b981", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>✅ PROS</div>
-          <div style={{ color: "#a1a1aa", fontSize: 12 }}>{activeType.pros}</div>
+      <div className="mb-4 grid gap-2 sm:grid-cols-2">
+        <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-4">
+          <div className="mb-1 text-[11px] font-bold text-emerald-300">✅ PROS</div>
+          <div className="text-sm text-zinc-300">{activeType.pros}</div>
         </div>
-        <div style={{ background: "#ef444415", borderRadius: 8, padding: 12, border: "1px solid #ef444433" }}>
-          <div style={{ color: "#ef4444", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>⚠️ CONTRAS</div>
-          <div style={{ color: "#a1a1aa", fontSize: 12 }}>{activeType.cons}</div>
+        <div className="rounded-xl border border-red-400/30 bg-red-500/10 p-4">
+          <div className="mb-1 text-[11px] font-bold text-red-300">⚠️ CONTRAS</div>
+          <div className="text-sm text-zinc-300">{activeType.cons}</div>
         </div>
       </div>
 
-      <div style={{ background: "#09090b", borderRadius: 10, padding: 16, border: "1px solid #27272a", marginBottom: 16 }}>
-        <div style={{ color: "#52525b", fontSize: 11, fontWeight: 700, marginBottom: 6 }}>REQUEST</div>
-        <div style={{ fontFamily: "monospace", fontSize: 13, color: activeType.color, marginBottom: 16 }}>{activeType.request}</div>
-        <div style={{ color: "#52525b", fontSize: 11, fontWeight: 700, marginBottom: 6 }}>RESPONSE</div>
-        <pre style={{ color: "#a1a1aa", fontSize: 12, margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+      <div className="mb-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+        <div className="mb-1 text-[11px] font-bold text-zinc-500">REQUEST</div>
+        <div className={cn('mb-4 font-mono text-sm', toneFromHex(activeType.color).text)}>{activeType.request}</div>
+        <div className="mb-1 text-[11px] font-bold text-zinc-500">RESPONSE</div>
+        <pre className="m-0 whitespace-pre-wrap font-mono text-xs leading-relaxed text-zinc-400">
           {JSON.stringify(response, null, 2)}
         </pre>
       </div>
 
-      <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+      <div className="flex flex-wrap justify-center gap-2">
         {paginationType === "offset" && (
-          <button onClick={prevPage} disabled={currentPage === 1} style={{
-            background: "#18181b", color: currentPage === 1 ? "#27272a" : "#a1a1aa", border: "1px solid #27272a",
-            borderRadius: 8, padding: "8px 16px", fontSize: 13, cursor: currentPage === 1 ? "default" : "pointer",
-          }}>← Anterior</button>
+          <button
+            onClick={prevPage}
+            disabled={currentPage === 1}
+            className={cn(
+              'inline-flex h-9 items-center justify-center rounded-xl border border-zinc-800 px-4 text-sm font-semibold',
+              currentPage === 1 ? 'cursor-not-allowed bg-zinc-950 text-zinc-600' : 'bg-zinc-900 text-zinc-200 hover:bg-zinc-800',
+            )}
+          >
+            ← Anterior
+          </button>
         )}
-        <button onClick={nextPage} disabled={response.data.length < pageSize} style={{
-          background: response.data.length < pageSize ? "#18181b" : activeType.color,
-          color: response.data.length < pageSize ? "#27272a" : "#fff", border: "none",
-          borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700,
-          cursor: response.data.length < pageSize ? "default" : "pointer",
-        }}>Siguiente →</button>
-        <button onClick={resetPagination} style={{
-          background: "#18181b", color: "#a1a1aa", border: "1px solid #27272a",
-          borderRadius: 8, padding: "8px 16px", fontSize: 13, cursor: "pointer",
-        }}>⟲ Reset</button>
+        <button
+          onClick={nextPage}
+          disabled={response.data.length < pageSize}
+          className={cn(
+            'inline-flex h-9 items-center justify-center rounded-xl px-4 text-sm font-bold text-white transition-colors',
+            response.data.length < pageSize
+              ? 'cursor-not-allowed bg-zinc-800 text-zinc-500'
+              : cn(
+                  activeType.color === '#3b82f6' && 'bg-sky-500 hover:bg-sky-400',
+                  activeType.color === '#10b981' && 'bg-emerald-500 hover:bg-emerald-400',
+                  activeType.color === '#f59e0b' && 'bg-amber-500 hover:bg-amber-400',
+                ),
+          )}
+        >
+          Siguiente →
+        </button>
+        <button
+          onClick={resetPagination}
+          className="inline-flex h-9 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 px-4 text-sm font-semibold text-zinc-200 transition-colors hover:bg-zinc-800"
+        >
+          ⟲ Reset
+        </button>
       </div>
     </div>
   );
@@ -637,50 +702,49 @@ function WebhooksLesson() {
 
   return (
     <div>
-      <p style={{ color: "#a1a1aa", marginBottom: 20, fontSize: 15, lineHeight: 1.7 }}>
-        En vez de preguntar constantemente "¿hay algo nuevo?" (<strong style={{ color: "#e4e4e7" }}>polling</strong>), un webhook hace que el servicio <strong style={{ color: "#e4e4e7" }}>te avise a vos</strong> cuando algo pasa. Es una API invertida.
+      <p className="mb-5 text-sm leading-relaxed text-zinc-400">
+        En vez de preguntar constantemente "¿hay algo nuevo?" (<strong className="text-zinc-100">polling</strong>), un webhook hace que el servicio <strong className="text-zinc-100">te avise a vos</strong> cuando algo pasa. Es una API invertida.
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
-        <div style={{ background: "#ef444412", borderRadius: 10, padding: 16, border: "1px solid #ef444433" }}>
-          <div style={{ color: "#ef4444", fontWeight: 700, fontSize: 14, marginBottom: 10 }}>❌ Polling (mal)</div>
-          <div style={{ fontFamily: "monospace", fontSize: 11, color: "#a1a1aa", lineHeight: 2 }}>
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-red-400/30 bg-red-500/10 p-4">
+          <div className="mb-2 text-sm font-bold text-red-300">❌ Polling (mal)</div>
+          <div className="font-mono text-xs leading-loose text-zinc-300">
             Cada 5 seg: GET /messages → [] vacío<br />
             Cada 5 seg: GET /messages → [] vacío<br />
             Cada 5 seg: GET /messages → [] vacío<br />
             Cada 5 seg: GET /messages → [1 msg] ¡al fin!<br />
-            <span style={{ color: "#ef4444" }}>= 95% de requests desperdiciadas</span>
+            <span className="text-red-300">= 95% de requests desperdiciadas</span>
           </div>
         </div>
-        <div style={{ background: "#10b98112", borderRadius: 10, padding: 16, border: "1px solid #10b98133" }}>
-          <div style={{ color: "#10b981", fontWeight: 700, fontSize: 14, marginBottom: 10 }}>✅ Webhook (bien)</div>
-          <div style={{ fontFamily: "monospace", fontSize: 11, color: "#a1a1aa", lineHeight: 2 }}>
+        <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-4">
+          <div className="mb-2 text-sm font-bold text-emerald-300">✅ Webhook (bien)</div>
+          <div className="font-mono text-xs leading-loose text-zinc-300">
             Tu server espera tranquilo...<br />
             WhatsApp → POST /tu-webhook ¡mensaje nuevo!<br />
             Tu server procesa inmediatamente.<br />
-            <span style={{ color: "#10b981" }}>= 0 requests desperdiciadas, respuesta instantánea</span>
+            <span className="text-emerald-300">= 0 requests desperdiciadas, respuesta instantánea</span>
           </div>
         </div>
       </div>
 
-      <button onClick={simulateWebhooks} style={{
-        background: "#6366f1", color: "#fff", border: "none", borderRadius: 10,
-        padding: "12px 24px", fontWeight: 700, fontSize: 14, cursor: "pointer", width: "100%", marginBottom: 20,
-      }}>🪝 Simular Webhooks Entrantes</button>
+      <button
+        onClick={simulateWebhooks}
+        className="mb-5 inline-flex h-11 w-full items-center justify-center rounded-xl bg-indigo-500 px-6 text-sm font-bold text-white transition-colors hover:bg-indigo-400"
+      >
+        🪝 Simular Webhooks Entrantes
+      </button>
 
       {events.length > 0 && (
-        <div style={{ background: "#09090b", borderRadius: 10, padding: 16, border: "1px solid #27272a", marginBottom: 20 }}>
-          <div style={{ color: "#52525b", fontSize: 11, fontWeight: 700, marginBottom: 12 }}>EVENTOS RECIBIDOS EN TU ENDPOINT</div>
+        <div className="mb-5 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+          <div className="mb-3 text-[11px] font-bold text-zinc-500">EVENTOS RECIBIDOS EN TU ENDPOINT</div>
           {events.map((e) => (
-            <div key={e.id} style={{
-              background: "#18181b", borderRadius: 8, padding: 12, marginBottom: 8,
-              borderLeft: "3px solid #6366f1", animation: "fadeIn 0.3s ease",
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span style={{ color: "#6366f1", fontWeight: 700, fontSize: 13, fontFamily: "monospace" }}>{e.type}</span>
-                <span style={{ color: "#52525b", fontSize: 11 }}>{e.source}</span>
+            <div key={e.id} className="mb-2 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <span className="font-mono text-sm font-bold text-indigo-300">{e.type}</span>
+                <span className="text-xs text-zinc-500">{e.source}</span>
               </div>
-              <pre style={{ color: "#a1a1aa", fontSize: 11, margin: 0, whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
+              <pre className="m-0 whitespace-pre-wrap font-mono text-xs leading-relaxed text-zinc-400">
                 {JSON.stringify(e.payload, null, 2)}
               </pre>
             </div>
@@ -688,12 +752,12 @@ function WebhooksLesson() {
         </div>
       )}
 
-      <div style={{ background: "#18181b", borderRadius: 10, padding: 16, border: "1px solid #27272a", marginBottom: 16 }}>
-        <div style={{ color: "#f59e0b", fontWeight: 700, fontSize: 12, letterSpacing: 1, marginBottom: 12 }}>🔏 VERIFICACIÓN HMAC</div>
-        <p style={{ color: "#a1a1aa", fontSize: 13, lineHeight: 1.6, margin: "0 0 12px" }}>
+      <div className="mb-4 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+        <div className="mb-3 text-xs font-bold tracking-widest text-amber-400">🔏 VERIFICACIÓN HMAC</div>
+        <p className="mb-3 text-sm leading-relaxed text-zinc-400">
           ¿Cómo sabés que un webhook realmente viene de WhatsApp y no de un atacante? Con una firma HMAC-SHA256 que solo vos y el servicio conocen.
         </p>
-        <div style={{ background: "#09090b", borderRadius: 8, padding: 12, fontFamily: "monospace", fontSize: 11, color: "#a1a1aa", lineHeight: 1.8, marginBottom: 12 }}>
+        <div className="mb-3 whitespace-pre-wrap rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 font-mono text-xs leading-relaxed text-zinc-300">
           {`// 1. Recibís el header con la firma
 X-Hub-Signature-256: sha256=abc123...
 
@@ -708,25 +772,25 @@ if (signature !== 'sha256=' + expected) {
   return res.status(401).send('Firma inválida');
 }`}
         </div>
-        <button onClick={verifySignature} style={{
-          background: "#f59e0b22", color: "#f59e0b", border: "1px solid #f59e0b44",
-          borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, cursor: "pointer",
-        }}>🔐 Simular Verificación</button>
+        <button
+          onClick={verifySignature}
+          className="inline-flex h-9 items-center justify-center rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 text-xs font-bold text-amber-300"
+        >
+          🔐 Simular Verificación
+        </button>
         {verified !== null && (
-          <div style={{ color: "#10b981", marginTop: 10, fontSize: 13, fontWeight: 700 }}>
-            ✅ Firma verificada. El webhook es legítimo.
-          </div>
+          <div className="mt-3 text-sm font-bold text-emerald-300">✅ Firma verificada. El webhook es legítimo.</div>
         )}
       </div>
 
-      <div style={{ background: "#18181b", borderRadius: 10, padding: 16, border: "1px solid #27272a" }}>
-        <div style={{ color: "#10b981", fontWeight: 700, fontSize: 12, letterSpacing: 1, marginBottom: 10 }}>📋 CHECKLIST DE WEBHOOKS ROBUSTOS</div>
-        <div style={{ color: "#a1a1aa", fontSize: 13, lineHeight: 2 }}>
-          ✓ Responder <strong style={{ color: "#e4e4e7" }}>200 inmediatamente</strong> y procesar async (con cola/BullMQ)<br />
-          ✓ Verificar firma HMAC en <strong style={{ color: "#e4e4e7" }}>cada request</strong><br />
-          ✓ Ser <strong style={{ color: "#e4e4e7" }}>idempotente</strong> (el servicio puede reenviar el mismo evento)<br />
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+        <div className="mb-2 text-xs font-bold tracking-widest text-emerald-300">📋 CHECKLIST DE WEBHOOKS ROBUSTOS</div>
+        <div className="text-sm leading-loose text-zinc-400">
+          ✓ Responder <strong className="text-zinc-100">200 inmediatamente</strong> y procesar async (con cola/BullMQ)<br />
+          ✓ Verificar firma HMAC en <strong className="text-zinc-100">cada request</strong><br />
+          ✓ Ser <strong className="text-zinc-100">idempotente</strong> (el servicio puede reenviar el mismo evento)<br />
           ✓ Loguear todo: event_id, timestamp, payload<br />
-          ✓ Tener un <strong style={{ color: "#e4e4e7" }}>mecanismo de retry</strong> propio si tu procesamiento falla
+          ✓ Tener un <strong className="text-zinc-100">mecanismo de retry</strong> propio si tu procesamiento falla
         </div>
       </div>
     </div>
@@ -771,58 +835,61 @@ GET /usuarios?api-version=2024-01-15`,
 
   return (
     <div>
-      <p style={{ color: "#a1a1aa", marginBottom: 20, fontSize: 15, lineHeight: 1.7 }}>
-        Cuando cambiás la estructura de tu API, no podés romper a los clientes existentes. El <strong style={{ color: "#e4e4e7" }}>versionamiento</strong> te permite evolucionar sin destruir.
+      <p className="mb-5 text-sm leading-relaxed text-zinc-400">
+        Cuando cambiás la estructura de tu API, no podés romper a los clientes existentes. El <strong className="text-zinc-100">versionamiento</strong> te permite evolucionar sin destruir.
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 24 }}>
+      <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
         {Object.entries(strategies).map(([key, s]) => (
-          <button key={key} onClick={() => setStrategy(key)} style={{
-            background: strategy === key ? s.color + "15" : "transparent",
-            border: `2px solid ${strategy === key ? s.color : "#27272a"}`,
-            borderRadius: 10, padding: "14px 10px", cursor: "pointer", textAlign: "center",
-          }}>
-            <div style={{ fontSize: 22 }}>{s.icon}</div>
-            <div style={{ color: s.color, fontWeight: 700, fontSize: 12, marginTop: 4 }}>{s.name}</div>
+          <button
+            key={key}
+            onClick={() => setStrategy(key)}
+            className={cn(
+              'rounded-xl border-2 px-4 py-4 text-center transition-colors',
+              strategy === key ? cn(toneFromHex(s.color).bg, toneFromHex(s.color).border) : 'border-zinc-800 hover:bg-zinc-900',
+            )}
+          >
+            <div className="text-2xl">{s.icon}</div>
+            <div className={cn('mt-1 text-xs font-bold', toneFromHex(s.color).text)}>{s.name}</div>
           </button>
         ))}
       </div>
 
-      <div style={{ background: "#09090b", borderRadius: 10, padding: 16, border: "1px solid #27272a", marginBottom: 16 }}>
-        <pre style={{ color: active.color, fontFamily: "monospace", fontSize: 12, margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.8 }}>
+      <div className="mb-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+        <pre className={cn('m-0 whitespace-pre-wrap font-mono text-xs leading-loose', toneFromHex(active.color).text)}>
           {active.example}
         </pre>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-        <div style={{ background: "#10b98112", borderRadius: 8, padding: 12 }}>
-          <div style={{ color: "#10b981", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>✅ PROS</div>
-          <div style={{ color: "#a1a1aa", fontSize: 12 }}>{active.pros}</div>
+      <div className="mb-4 grid gap-2 sm:grid-cols-2">
+        <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-4">
+          <div className="mb-1 text-[11px] font-bold text-emerald-300">✅ PROS</div>
+          <div className="text-sm text-zinc-300">{active.pros}</div>
         </div>
-        <div style={{ background: "#ef444412", borderRadius: 8, padding: 12 }}>
-          <div style={{ color: "#ef4444", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>⚠️ CONTRAS</div>
-          <div style={{ color: "#a1a1aa", fontSize: 12 }}>{active.cons}</div>
+        <div className="rounded-xl border border-red-400/20 bg-red-500/10 p-4">
+          <div className="mb-1 text-[11px] font-bold text-red-300">⚠️ CONTRAS</div>
+          <div className="text-sm text-zinc-300">{active.cons}</div>
         </div>
       </div>
-      <div style={{ color: "#52525b", fontSize: 12, marginBottom: 24 }}>
-        <strong style={{ color: "#71717a" }}>¿Quién lo usa?</strong> {active.who}
+      <div className="mb-6 text-xs text-zinc-500">
+        <strong className="text-zinc-400">¿Quién lo usa?</strong> {active.who}
       </div>
 
-      <div style={{ background: "#18181b", borderRadius: 10, padding: 16, border: "1px solid #27272a" }}>
-        <div style={{ color: "#6366f1", fontWeight: 700, fontSize: 12, letterSpacing: 1, marginBottom: 10 }}>💡 BREAKING vs NON-BREAKING CHANGES</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <div style={{ background: "#10b98110", borderRadius: 8, padding: 12 }}>
-            <div style={{ color: "#10b981", fontWeight: 700, fontSize: 12, marginBottom: 8 }}>✅ No requiere nueva versión</div>
-            <div style={{ color: "#a1a1aa", fontSize: 12, lineHeight: 1.8 }}>
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+        <div className="mb-3 text-xs font-bold tracking-widest text-indigo-300">💡 BREAKING vs NON-BREAKING CHANGES</div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-4">
+            <div className="mb-2 text-xs font-bold text-emerald-300">✅ No requiere nueva versión</div>
+            <div className="text-sm leading-relaxed text-zinc-300">
               Agregar un campo nuevo al response<br />
               Agregar un endpoint nuevo<br />
               Agregar un query param opcional<br />
               Hacer un campo requerido → opcional
             </div>
           </div>
-          <div style={{ background: "#ef444410", borderRadius: 8, padding: 12 }}>
-            <div style={{ color: "#ef4444", fontWeight: 700, fontSize: 12, marginBottom: 8 }}>💥 REQUIERE nueva versión</div>
-            <div style={{ color: "#a1a1aa", fontSize: 12, lineHeight: 1.8 }}>
+          <div className="rounded-xl border border-red-400/20 bg-red-500/10 p-4">
+            <div className="mb-2 text-xs font-bold text-red-300">💥 REQUIERE nueva versión</div>
+            <div className="text-sm leading-relaxed text-zinc-300">
               Renombrar un campo (nombre → first_name)<br />
               Eliminar un campo del response<br />
               Cambiar tipo de un campo (string → int)<br />
@@ -873,18 +940,22 @@ function ErrorsLesson() {
     setRequests([]);
   }
 
-  const stateColors = { closed: "#10b981", open: "#ef4444", half_open: "#f59e0b" };
   const stateLabels = { closed: "CERRADO (normal)", open: "ABIERTO (bloqueando)", half_open: "SEMI-ABIERTO (probando)" };
+  const stateTones = {
+    closed: { text: 'text-emerald-300', border: 'border-emerald-400/60', bg: 'bg-emerald-500/10' },
+    open: { text: 'text-red-300', border: 'border-red-400/60', bg: 'bg-red-500/10' },
+    half_open: { text: 'text-amber-300', border: 'border-amber-400/60', bg: 'bg-amber-500/10' },
+  }
 
   return (
     <div>
-      <p style={{ color: "#a1a1aa", marginBottom: 20, fontSize: 15, lineHeight: 1.7 }}>
-        Las APIs fallan. Siempre. Un sistema resiliente no evita los errores — los <strong style={{ color: "#e4e4e7" }}>maneja con gracia</strong>.
+      <p className="mb-5 text-sm leading-relaxed text-zinc-400">
+        Las APIs fallan. Siempre. Un sistema resiliente no evita los errores — los <strong className="text-zinc-100">maneja con gracia</strong>.
       </p>
 
-      <div style={{ background: "#09090b", borderRadius: 10, padding: 16, border: "1px solid #27272a", marginBottom: 20 }}>
-        <div style={{ color: "#71717a", fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>ESTRUCTURA DE ERROR PROFESIONAL</div>
-        <pre style={{ color: "#a1a1aa", fontFamily: "monospace", fontSize: 12, margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{`{
+      <div className="mb-5 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+        <div className="mb-3 text-xs font-bold tracking-widest text-zinc-500">ESTRUCTURA DE ERROR PROFESIONAL</div>
+        <pre className="m-0 whitespace-pre-wrap font-mono text-xs leading-relaxed text-zinc-400">{`{
   "error": {
     "code": "VALIDATION_ERROR",      ← código máquina (tu app hace switch)
     "message": "Email inválido",     ← mensaje humano (se muestra al user)
@@ -897,46 +968,49 @@ function ErrorsLesson() {
 }`}</pre>
       </div>
 
-      <div style={{ color: "#71717a", fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>⚡ CIRCUIT BREAKER INTERACTIVO</div>
-      <p style={{ color: "#a1a1aa", fontSize: 13, marginBottom: 16 }}>
-        Un circuit breaker protege tu sistema: si una API falla muchas veces seguidas, <strong style={{ color: "#e4e4e7" }}>deja de llamarla</strong> temporalmente para no saturarla.
+      <div className="mb-2 text-xs font-bold tracking-widest text-zinc-500">⚡ CIRCUIT BREAKER INTERACTIVO</div>
+      <p className="mb-4 text-sm leading-relaxed text-zinc-400">
+        Un circuit breaker protege tu sistema: si una API falla muchas veces seguidas, <strong className="text-zinc-100">deja de llamarla</strong> temporalmente para no saturarla.
       </p>
 
-      <div style={{
-        background: stateColors[circuitState] + "15",
-        border: `2px solid ${stateColors[circuitState]}`,
-        borderRadius: 12, padding: 16, textAlign: "center", marginBottom: 16,
-      }}>
-        <div style={{ fontSize: 28, marginBottom: 4 }}>
+      <div className={cn('mb-4 rounded-xl border-2 p-4 text-center', stateTones[circuitState].bg, stateTones[circuitState].border)}>
+        <div className="text-3xl">
           {circuitState === "closed" ? "🟢" : circuitState === "open" ? "🔴" : "🟡"}
         </div>
-        <div style={{ color: stateColors[circuitState], fontWeight: 800, fontSize: 16, fontFamily: "monospace" }}>
+        <div className={cn('mt-1 font-mono text-base font-black', stateTones[circuitState].text)}>
           {stateLabels[circuitState]}
         </div>
-        <div style={{ color: "#71717a", fontSize: 12, marginTop: 4 }}>
+        <div className="mt-1 text-xs text-zinc-500">
           Fallos consecutivos: {failures}/3
           {circuitState === "open" && " — Esperando 5s para probar de nuevo..."}
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <button onClick={simulateRequest} style={{
-          background: "#6366f1", color: "#fff", border: "none", borderRadius: 8,
-          padding: "10px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer", flex: 1,
-        }}>⚡ Enviar Request</button>
-        <button onClick={resetCircuit} style={{
-          background: "#18181b", color: "#a1a1aa", border: "1px solid #27272a",
-          borderRadius: 8, padding: "10px 20px", fontSize: 13, cursor: "pointer",
-        }}>⟲ Reset</button>
+      <div className="mb-4 flex flex-wrap gap-2">
+        <button
+          onClick={simulateRequest}
+          className="inline-flex h-10 flex-1 items-center justify-center rounded-xl bg-indigo-500 px-4 text-sm font-bold text-white transition-colors hover:bg-indigo-400"
+        >
+          ⚡ Enviar Request
+        </button>
+        <button
+          onClick={resetCircuit}
+          className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 px-4 text-sm font-semibold text-zinc-200 transition-colors hover:bg-zinc-800"
+        >
+          ⟲ Reset
+        </button>
       </div>
 
       {requests.length > 0 && (
-        <div style={{ background: "#09090b", borderRadius: 10, padding: 12, border: "1px solid #27272a", maxHeight: 200, overflowY: "auto" }}>
+        <div className="max-h-52 overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-950 p-3">
           {requests.map((r, i) => (
-            <div key={i} style={{
-              display: "flex", gap: 8, alignItems: "center", padding: "6px 8px",
-              fontSize: 12, fontFamily: "monospace", color: r.status === "ok" ? "#10b981" : r.status === "error" ? "#ef4444" : "#f59e0b",
-            }}>
+            <div
+              key={i}
+              className={cn(
+                'flex items-center gap-2 px-2 py-1 font-mono text-xs',
+                r.status === 'ok' ? 'text-emerald-300' : r.status === 'error' ? 'text-red-300' : 'text-amber-300',
+              )}
+            >
               <span>{r.status === "ok" ? "✅" : r.status === "error" ? "❌" : "🚫"}</span>
               <span>{r.msg}</span>
             </div>
@@ -944,12 +1018,12 @@ function ErrorsLesson() {
         </div>
       )}
 
-      <div style={{ background: "#18181b", borderRadius: 10, padding: 16, border: "1px solid #27272a", marginTop: 16 }}>
-        <div style={{ color: "#6366f1", fontWeight: 700, fontSize: 12, letterSpacing: 1, marginBottom: 8 }}>🔄 CICLO DEL CIRCUIT BREAKER</div>
-        <div style={{ color: "#a1a1aa", fontSize: 13, lineHeight: 1.8 }}>
-          <strong style={{ color: "#10b981" }}>CERRADO</strong> → requests pasan normal. Si hay 3+ fallos seguidos...<br />
-          <strong style={{ color: "#ef4444" }}>ABIERTO</strong> → BLOQUEA requests por N segundos (no llama al server). Después...<br />
-          <strong style={{ color: "#f59e0b" }}>SEMI-ABIERTO</strong> → deja pasar 1 request de prueba. Si OK → cerrado. Si falla → abierto de nuevo.
+      <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+        <div className="mb-2 text-xs font-bold tracking-widest text-indigo-300">🔄 CICLO DEL CIRCUIT BREAKER</div>
+        <div className="text-sm leading-relaxed text-zinc-400">
+          <strong className="text-emerald-300">CERRADO</strong> → requests pasan normal. Si hay 3+ fallos seguidos...<br />
+          <strong className="text-red-300">ABIERTO</strong> → BLOQUEA requests por N segundos (no llama al server). Después...<br />
+          <strong className="text-amber-300">SEMI-ABIERTO</strong> → deja pasar 1 request de prueba. Si OK → cerrado. Si falla → abierto de nuevo.
         </div>
       </div>
     </div>
@@ -1018,25 +1092,28 @@ Cache:        [req_abc123] HIT redis → 2ms
 
   return (
     <div>
-      <p style={{ color: "#a1a1aa", marginBottom: 20, fontSize: 15, lineHeight: 1.7 }}>
-        Un API Gateway es la <strong style={{ color: "#e4e4e7" }}>puerta de entrada</strong> a tu sistema de microservicios. Centraliza auth, rate limiting, routing y logging en un solo punto. Es lo que n8n hace a nivel de orquestación.
+      <p className="mb-5 text-sm leading-relaxed text-zinc-400">
+        Un API Gateway es la <strong className="text-zinc-100">puerta de entrada</strong> a tu sistema de microservicios. Centraliza auth, rate limiting, routing y logging en un solo punto. Es lo que n8n hace a nivel de orquestación.
       </p>
 
-      <div style={{ display: "grid", gap: 8, marginBottom: 20 }}>
+      <div className="mb-5 grid gap-2">
         {features.map((f) => (
-          <button key={f.id} onClick={() => setActiveFeature(activeFeature === f.id ? null : f.id)} style={{
-            background: activeFeature === f.id ? f.color + "12" : "#18181b",
-            border: `1px solid ${activeFeature === f.id ? f.color + "44" : "#27272a"}`,
-            borderRadius: 10, padding: "14px 16px", cursor: "pointer", textAlign: "left", transition: "all 0.2s",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 20 }}>{f.icon}</span>
-              <span style={{ color: f.color, fontWeight: 700, fontSize: 14 }}>{f.name}</span>
+          <button
+            key={f.id}
+            onClick={() => setActiveFeature(activeFeature === f.id ? null : f.id)}
+            className={cn(
+              'rounded-xl border px-4 py-4 text-left transition-colors',
+              activeFeature === f.id ? cn(toneFromHex(f.color).bg, toneFromHex(f.color).border) : 'border-zinc-800 bg-zinc-900 hover:bg-zinc-800',
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xl">{f.icon}</span>
+              <span className={cn('text-sm font-bold', toneFromHex(f.color).text)}>{f.name}</span>
             </div>
             {activeFeature === f.id && (
-              <div style={{ marginTop: 12 }}>
-                <div style={{ color: "#a1a1aa", fontSize: 13, lineHeight: 1.6, marginBottom: 12 }}>{f.desc}</div>
-                <pre style={{ background: "#09090b", borderRadius: 8, padding: 12, margin: 0, fontFamily: "monospace", fontSize: 11, color: "#a1a1aa", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+              <div className="mt-3">
+                <div className="mb-3 text-sm leading-relaxed text-zinc-300">{f.desc}</div>
+                <pre className="m-0 whitespace-pre-wrap rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 font-mono text-xs leading-relaxed text-zinc-400">
                   {f.example}
                 </pre>
               </div>
@@ -1045,18 +1122,18 @@ Cache:        [req_abc123] HIT redis → 2ms
         ))}
       </div>
 
-      <div style={{ background: "#18181b", borderRadius: 10, padding: 16, border: "1px solid #27272a" }}>
-        <div style={{ color: "#f59e0b", fontWeight: 700, fontSize: 12, letterSpacing: 1, marginBottom: 10 }}>🏗️ GATEWAYS POPULARES</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+        <div className="mb-3 text-xs font-bold tracking-widest text-amber-400">🏗️ GATEWAYS POPULARES</div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {[
             { name: "Kong", desc: "Open source, plugin-based, enterprise-ready" },
             { name: "AWS API Gateway", desc: "Serverless, integra con Lambda" },
             { name: "NGINX", desc: "Reverse proxy + load balancer clásico" },
             { name: "n8n (orquestador)", desc: "No es gateway puro, pero coordina múltiples APIs en flujos" },
           ].map((g) => (
-            <div key={g.name} style={{ background: "#09090b", borderRadius: 8, padding: 10 }}>
-              <div style={{ color: "#6366f1", fontWeight: 700, fontSize: 13 }}>{g.name}</div>
-              <div style={{ color: "#52525b", fontSize: 11, marginTop: 2 }}>{g.desc}</div>
+            <div key={g.name} className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3">
+              <div className="text-sm font-bold text-indigo-300">{g.name}</div>
+              <div className="mt-1 text-xs text-zinc-500">{g.desc}</div>
             </div>
           ))}
         </div>
@@ -1089,132 +1166,6 @@ const ALL_QUESTIONS = [
   { q: "¿Por qué un webhook debe ser idempotente?", opts: ["Por rendimiento: evita la sobrecarga de la base de datos", "Por resiliencia: el emisor puede reenviar el mismo evento si falla", "Por seguridad: previene ataques de denegación de servicio", "No necesita serlo: los webhooks garantizan entrega única siempre"], correct: "Por resiliencia: el emisor puede reenviar el mismo evento si falla", explain: "Si tu server responde lento o el 200 se pierde, el emisor reenvía el mismo webhook. Si no sos idempotente, procesás el evento dos veces." },
 ];
 
-function QuizLesson() {
-  const [questions, setQuestions] = useState([]);
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [finished, setFinished] = useState(false);
-  const [showExplain, setShowExplain] = useState(false);
-  const [shuffledOpts, setShuffledOpts] = useState([]);
-
-  useEffect(() => {
-    const q = shuffle(ALL_QUESTIONS).slice(0, 15);
-    setQuestions(q);
-    setShuffledOpts(shuffle(q[0]?.opts || []));
-  }, []);
-
-  useEffect(() => {
-    if (questions[current]) {
-      setShuffledOpts(shuffle(questions[current].opts));
-    }
-  }, [current, questions]);
-
-  function selectAnswer(opt) {
-    if (selected !== null) return;
-    setSelected(opt);
-    setShowExplain(true);
-    if (opt === questions[current].correct) setScore(score + 1);
-  }
-
-  function nextQuestion() {
-    if (current + 1 >= questions.length) {
-      setFinished(true);
-    } else {
-      setCurrent(current + 1);
-      setSelected(null);
-      setShowExplain(false);
-    }
-  }
-
-  function restart() {
-    const q = shuffle(ALL_QUESTIONS).slice(0, 15);
-    setQuestions(q);
-    setCurrent(0);
-    setSelected(null);
-    setScore(0);
-    setFinished(false);
-    setShowExplain(false);
-  }
-
-  if (questions.length === 0) return <div style={{ color: "#71717a" }}>Cargando...</div>;
-
-  if (finished) {
-    const pct = Math.round((score / questions.length) * 100);
-    const emoji = pct >= 80 ? "🏆" : pct >= 60 ? "👍" : "📚";
-    const msg = pct >= 80 ? "¡Nivel senior! Dominás conceptos avanzados de APIs." : pct >= 60 ? "Buen nivel. Repasá los temas donde fallaste." : "Hay que seguir estudiando. Volvé a las lecciones y reintentá.";
-    return (
-      <div style={{ textAlign: "center", padding: "40px 20px" }}>
-        <div style={{ fontSize: 64, marginBottom: 16 }}>{emoji}</div>
-        <div style={{ color: "#e4e4e7", fontSize: 24, fontWeight: 800, marginBottom: 8 }}>{score}/{questions.length}</div>
-        <div style={{ color: pct >= 80 ? "#10b981" : pct >= 60 ? "#f59e0b" : "#ef4444", fontSize: 48, fontWeight: 900, marginBottom: 12 }}>{pct}%</div>
-        <div style={{ color: "#a1a1aa", fontSize: 15, marginBottom: 24 }}>{msg}</div>
-        <button onClick={restart} style={{
-          background: "#6366f1", color: "#fff", border: "none", borderRadius: 10,
-          padding: "12px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer",
-        }}>🔄 Quiz nuevo (preguntas aleatorias)</button>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <span style={{ color: "#52525b", fontSize: 13 }}>Pregunta {current + 1} de {questions.length}</span>
-        <span style={{ color: "#10b981", fontWeight: 700, fontSize: 14 }}>Score: {score}</span>
-      </div>
-
-      <div style={{ width: "100%", height: 3, background: "#27272a", borderRadius: 2, marginBottom: 24 }}>
-        <div style={{ width: `${((current + 1) / questions.length) * 100}%`, height: 3, background: "linear-gradient(90deg, #6366f1, #a78bfa)", borderRadius: 2, transition: "width 0.3s" }} />
-      </div>
-
-      <div style={{ color: "#e4e4e7", fontSize: 17, fontWeight: 700, marginBottom: 24, lineHeight: 1.6 }}>{q.q}</div>
-
-      <div style={{ display: "grid", gap: 10, marginBottom: 20 }}>
-        {shuffledOpts.map((opt, idx) => {
-          let bg = "#18181b", border = "#27272a", textColor = "#e4e4e7";
-          if (selected !== null) {
-            if (opt === q.correct) { bg = "#10b98118"; border = "#10b981"; textColor = "#10b981"; }
-            else if (opt === selected) { bg = "#ef444418"; border = "#ef4444"; textColor = "#ef4444"; }
-          }
-          return (
-            <button key={opt} onClick={() => selectAnswer(opt)} style={{
-              background: bg, border: `2px solid ${border}`, borderRadius: 10, padding: "14px 16px",
-              color: textColor, fontSize: 14, cursor: selected ? "default" : "pointer", textAlign: "left", transition: "all 0.2s",
-            }}>
-              <span style={{ color: "#52525b", marginRight: 10, fontWeight: 700 }}>{String.fromCharCode(65 + idx)}.</span>
-              {opt}
-            </button>
-          );
-        })}
-      </div>
-
-      {showExplain && (
-        <div style={{
-          background: "#18181b", borderRadius: 10, padding: 16, marginBottom: 16,
-          borderLeft: `4px solid ${selected === q.correct ? "#10b981" : "#f59e0b"}`,
-        }}>
-          <div style={{ color: selected === q.correct ? "#10b981" : "#f59e0b", fontWeight: 700, marginBottom: 6 }}>
-            {selected === q.correct ? "✅ ¡Correcto!" : "❌ Incorrecto"}
-          </div>
-          <div style={{ color: "#a1a1aa", fontSize: 13, lineHeight: 1.6 }}>{q.explain}</div>
-        </div>
-      )}
-
-      {selected !== null && (
-        <button onClick={nextQuestion} style={{
-          background: "#6366f1", color: "#fff", border: "none", borderRadius: 10, padding: "12px 24px",
-          fontWeight: 700, fontSize: 14, cursor: "pointer", width: "100%",
-        }}>
-          {current + 1 >= questions.length ? "Ver Resultado →" : "Siguiente →"}
-        </button>
-      )}
-    </div>
-  );
-}
-
 
 // ─── MAIN APP ───
 export default function AdvancedAPILab() {
@@ -1236,113 +1187,41 @@ export default function AdvancedAPILab() {
       case "versioning": return <VersioningLesson />;
       case "errors": return <ErrorsLesson />;
       case "gateway": return <GatewayLesson />;
-      case "quiz": return <QuizLesson />;
+      case "quiz":
+        return (
+          <Quiz
+            questionsBank={ALL_QUESTIONS}
+            questionCount={15}
+            messages={{
+              high: "¡Nivel senior! Dominás conceptos avanzados de APIs.",
+              medium: "Buen nivel. Repasá los temas donde fallaste.",
+              low: "Hay que seguir estudiando. Volvé a las lecciones y reintentá.",
+            }}
+            finalButtonText="Ver Resultado →"
+            restartButtonText="🔄 Quiz nuevo (preguntas aleatorias)"
+            gradientClassName="bg-gradient-to-r from-amber-500 to-red-500"
+            primaryClassName="bg-indigo-500 hover:bg-indigo-400"
+          />
+        )
       default: return null;
     }
   }
 
-  const currentIdx = LESSONS.findIndex((l) => l.id === activeLesson);
-
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#09090b",
-      color: "#e4e4e7",
-      fontFamily: "'Outfit', 'Satoshi', -apple-system, sans-serif",
-    }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-      `}</style>
-
-      <div style={{
-        background: "linear-gradient(160deg, #09090b 0%, #18181b 50%, #1a1025 100%)",
-        borderBottom: "1px solid #27272a",
-        padding: "20px 20px",
-      }}>
-        <div style={{ maxWidth: 920, margin: "0 auto" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-            <span style={{ fontSize: 26 }}>🔥</span>
-            <h1 style={{
-              margin: 0, fontSize: 22, fontWeight: 900, letterSpacing: -0.5,
-              background: "linear-gradient(135deg, #f59e0b, #ef4444, #a78bfa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-            }}>
-              Advanced API Lab
-            </h1>
-            <span style={{
-              background: "#f59e0b22", color: "#f59e0b", fontSize: 10, fontWeight: 800,
-              padding: "3px 8px", borderRadius: 6, letterSpacing: 1,
-            }}>NIVEL 2</span>
-          </div>
-          <p style={{ margin: 0, color: "#52525b", fontSize: 13 }}>OAuth, Rate Limiting, Idempotencia, Webhooks y más</p>
-          <div style={{ marginTop: 10, display: "flex", gap: 4, alignItems: "center" }}>
-            <div style={{ flex: 1, height: 3, background: "#27272a", borderRadius: 2 }}>
-              <div style={{
-                width: `${(visited.length / LESSONS.length) * 100}%`, height: 3,
-                background: "linear-gradient(90deg, #f59e0b, #ef4444)", borderRadius: 2, transition: "width 0.5s",
-              }} />
-            </div>
-            <span style={{ color: "#52525b", fontSize: 11, marginLeft: 8 }}>{visited.length}/{LESSONS.length}</span>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 920, margin: "0 auto", padding: "14px 14px 40px" }}>
-        <div style={{ display: "flex", gap: 5, overflowX: "auto", paddingBottom: 6, marginBottom: 20, scrollbarWidth: "thin" }}>
-          {LESSONS.map((l) => (
-            <button key={l.id} onClick={() => navigate(l.id)} style={{
-              background: activeLesson === l.id ? "#18181b" : "transparent",
-              border: `1px solid ${activeLesson === l.id ? "#6366f1" : "transparent"}`,
-              borderRadius: 8, padding: "8px 12px", cursor: "pointer",
-              display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
-            }}>
-              <span style={{ fontSize: 14 }}>{visited.includes(l.id) && l.id !== activeLesson ? "✅" : l.icon}</span>
-              <span style={{ color: activeLesson === l.id ? "#e4e4e7" : "#52525b", fontSize: 12, fontWeight: activeLesson === l.id ? 700 : 500 }}>
-                {l.title}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: "#111113", borderRadius: 14, border: "1px solid #27272a", overflow: "hidden" }}>
-          <div style={{ padding: "18px 22px", borderBottom: "1px solid #27272a", display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 26 }}>{LESSONS[currentIdx].icon}</span>
-            <div>
-              <h2 style={{ margin: 0, fontSize: 19, fontWeight: 800 }}>{LESSONS[currentIdx].title}</h2>
-              <p style={{ margin: "2px 0 0", color: "#52525b", fontSize: 12 }}>{LESSONS[currentIdx].desc}</p>
-            </div>
-          </div>
-          <div style={{ padding: 22 }} key={activeLesson}>
-            {renderLesson()}
-          </div>
-        </div>
-
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 14 }}>
-          <button
-            onClick={() => navigate(LESSONS[Math.max(0, currentIdx - 1)].id)}
-            disabled={currentIdx === 0}
-            style={{
-              background: "#18181b", color: currentIdx === 0 ? "#27272a" : "#a1a1aa",
-              border: "1px solid #27272a", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 600,
-              cursor: currentIdx === 0 ? "default" : "pointer",
-            }}
-          >← Anterior</button>
-          <button
-            onClick={() => navigate(LESSONS[Math.min(LESSONS.length - 1, currentIdx + 1)].id)}
-            disabled={currentIdx === LESSONS.length - 1}
-            style={{
-              background: currentIdx === LESSONS.length - 1 ? "#18181b" : "linear-gradient(135deg, #6366f1, #8b5cf6)",
-              color: currentIdx === LESSONS.length - 1 ? "#27272a" : "#fff",
-              border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 700,
-              cursor: currentIdx === LESSONS.length - 1 ? "default" : "pointer",
-            }}
-          >Siguiente →</button>
-        </div>
-      </div>
-    </div>
-  );
+    <LabLayout
+      icon="🔥"
+      title="Advanced API Lab"
+      titleClassName="text-xl font-black tracking-tight bg-gradient-to-r from-amber-400 via-red-400 to-violet-400 bg-clip-text text-transparent"
+      subtitle="OAuth, Rate Limiting, Idempotencia, Webhooks y más"
+      levelLabel="NIVEL 2"
+      levelColor="amber"
+      progressBarClassName="bg-gradient-to-r from-amber-500 to-red-500"
+      lessons={LESSONS}
+      activeLesson={activeLesson}
+      visited={visited}
+      onNavigate={navigate}
+    >
+      {renderLesson()}
+    </LabLayout>
+  )
 }

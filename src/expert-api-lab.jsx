@@ -1,20 +1,9 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-
-// ─── UTILS ───
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function getStatusColor(c) {
-  if (c >= 200 && c < 300) return "#10b981";
-  if (c >= 400 && c < 500) return "#f59e0b";
-  return "#ef4444";
-}
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import LabLayout from './components/LabLayout.jsx'
+import Quiz from './components/Quiz.jsx'
+import { shuffle } from './utils/shuffle.js'
+import { cn } from './utils/cn.js'
+import { toneFromHex } from './utils/tone.js'
 
 // ─── LESSONS CONFIG ───
 const LESSONS = [
@@ -1119,121 +1108,6 @@ const ALL_QUESTIONS = [
   { q: "¿Qué es consistencia eventual?", opts: ["Garantiza que los datos estén consistentes inmediatamente en todos lados", "Los nodos convergen al mismo estado después de un breve período", "Un motor de base de datos diseñado para transacciones financieras", "Un protocolo de seguridad que verifica firmas digitales por lotes"], correct: "Los nodos convergen al mismo estado después de un breve período", explain: "Consistencia eventual: después de escribir, puede haber un momento donde distintos nodos tienen datos distintos, pero eventualmente todos convergen. Tradeoff de sistemas AP." },
 ];
 
-function QuizLesson() {
-  const [questions, setQuestions] = useState([]);
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [finished, setFinished] = useState(false);
-  const [showExplain, setShowExplain] = useState(false);
-  const [shuffledOpts, setShuffledOpts] = useState([]);
-
-  useEffect(() => {
-    const q = shuffle(ALL_QUESTIONS).slice(0, 20);
-    setQuestions(q);
-    setShuffledOpts(shuffle(q[0]?.opts || []));
-  }, []);
-
-  useEffect(() => {
-    if (questions[current]) setShuffledOpts(shuffle(questions[current].opts));
-  }, [current, questions]);
-
-  function selectAnswer(opt) {
-    if (selected !== null) return;
-    setSelected(opt);
-    setShowExplain(true);
-    if (opt === questions[current].correct) setScore(score + 1);
-  }
-
-  function nextQuestion() {
-    if (current + 1 >= questions.length) setFinished(true);
-    else { setCurrent(current + 1); setSelected(null); setShowExplain(false); }
-  }
-
-  function restart() {
-    const q = shuffle(ALL_QUESTIONS).slice(0, 20);
-    setQuestions(q);
-    setCurrent(0); setSelected(null); setScore(0); setFinished(false); setShowExplain(false);
-  }
-
-  if (questions.length === 0) return <div style={{ color: "#71717a" }}>Cargando...</div>;
-
-  if (finished) {
-    const pct = Math.round((score / questions.length) * 100);
-    const emoji = pct >= 90 ? "👑" : pct >= 70 ? "🏆" : pct >= 50 ? "👍" : "📚";
-    const msg = pct >= 90 ? "¡Nivel Arquitecto! Dominás API design a nivel senior." : pct >= 70 ? "Excelente base. Profundizá en los temas que fallaste." : pct >= 50 ? "Buen progreso. Repasá las lecciones y volvé a intentar." : "Necesitás más estudio. Revisá cada lección a fondo.";
-    return (
-      <div style={{ textAlign: "center", padding: "40px 20px" }}>
-        <div style={{ fontSize: 64, marginBottom: 16 }}>{emoji}</div>
-        <div style={{ color: "#e4e4e7", fontSize: 24, fontWeight: 800, marginBottom: 8 }}>{score}/{questions.length}</div>
-        <div style={{ color: pct >= 70 ? "#10b981" : pct >= 50 ? "#f59e0b" : "#ef4444", fontSize: 48, fontWeight: 900, marginBottom: 12 }}>{pct}%</div>
-        <div style={{ color: "#a1a1aa", fontSize: 15, marginBottom: 24 }}>{msg}</div>
-        <button onClick={restart} style={{
-          background: "#6366f1", color: "#fff", border: "none", borderRadius: 10,
-          padding: "12px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer",
-        }}>🔄 Quiz nuevo (preguntas aleatorias)</button>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <span style={{ color: "#52525b", fontSize: 13 }}>Pregunta {current + 1} de {questions.length}</span>
-        <span style={{ color: "#10b981", fontWeight: 700, fontSize: 14 }}>Score: {score}</span>
-      </div>
-
-      <div style={{ width: "100%", height: 3, background: "#27272a", borderRadius: 2, marginBottom: 24 }}>
-        <div style={{ width: `${((current + 1) / questions.length) * 100}%`, height: 3, background: "linear-gradient(90deg, #ef4444, #f59e0b, #10b981)", borderRadius: 2, transition: "width 0.3s" }} />
-      </div>
-
-      <div style={{ color: "#e4e4e7", fontSize: 17, fontWeight: 700, marginBottom: 24, lineHeight: 1.6 }}>{q.q}</div>
-
-      <div style={{ display: "grid", gap: 10, marginBottom: 20 }}>
-        {shuffledOpts.map((opt, idx) => {
-          let bg = "#18181b", border = "#27272a", textColor = "#e4e4e7";
-          if (selected !== null) {
-            if (opt === q.correct) { bg = "#10b98118"; border = "#10b981"; textColor = "#10b981"; }
-            else if (opt === selected) { bg = "#ef444418"; border = "#ef4444"; textColor = "#ef4444"; }
-          }
-          return (
-            <button key={opt} onClick={() => selectAnswer(opt)} style={{
-              background: bg, border: `2px solid ${border}`, borderRadius: 10, padding: "14px 16px",
-              color: textColor, fontSize: 14, cursor: selected ? "default" : "pointer", textAlign: "left", transition: "all 0.2s",
-            }}>
-              <span style={{ color: "#52525b", marginRight: 10, fontWeight: 700 }}>{String.fromCharCode(65 + idx)}.</span>
-              {opt}
-            </button>
-          );
-        })}
-      </div>
-
-      {showExplain && (
-        <div style={{
-          background: "#18181b", borderRadius: 10, padding: 16, marginBottom: 16,
-          borderLeft: `4px solid ${selected === q.correct ? "#10b981" : "#f59e0b"}`,
-        }}>
-          <div style={{ color: selected === q.correct ? "#10b981" : "#f59e0b", fontWeight: 700, marginBottom: 6 }}>
-            {selected === q.correct ? "✅ ¡Correcto!" : "❌ Incorrecto"}
-          </div>
-          <div style={{ color: "#a1a1aa", fontSize: 13, lineHeight: 1.6 }}>{q.explain}</div>
-        </div>
-      )}
-
-      {selected !== null && (
-        <button onClick={nextQuestion} style={{
-          background: "#6366f1", color: "#fff", border: "none", borderRadius: 10,
-          padding: "12px 24px", fontWeight: 700, fontSize: 14, cursor: "pointer", width: "100%",
-        }}>
-          {current + 1 >= questions.length ? "Ver Resultado →" : "Siguiente →"}
-        </button>
-      )}
-    </div>
-  );
-}
-
 // ─── MAIN APP ───
 export default function ExpertAPILab() {
   const [activeLesson, setActiveLesson] = useState("design");
@@ -1254,113 +1128,42 @@ export default function ExpertAPILab() {
       case "openapi": return <OpenAPILesson />;
       case "distributed": return <DistributedLesson />;
       case "realworld": return <RealWorldLesson />;
-      case "quiz": return <QuizLesson />;
+      case "quiz":
+        return (
+          <Quiz
+            questionsBank={ALL_QUESTIONS}
+            questionCount={20}
+            messages={{
+              high: "¡Nivel Arquitecto! Dominás API design a nivel senior.",
+              medium: "Excelente base. Profundizá en los temas que fallaste.",
+              low: "Buen progreso. Repasá las lecciones y volvé a intentar.",
+            }}
+            thresholds={{ high: 70, medium: 50 }}
+            finalButtonText="Ver Resultado →"
+            restartButtonText="🔄 Quiz nuevo (preguntas aleatorias)"
+            gradientClassName="bg-gradient-to-r from-red-500 via-amber-500 to-emerald-500"
+            primaryClassName="bg-indigo-500 hover:bg-indigo-400"
+          />
+        )
       default: return null;
     }
   }
 
-  const currentIdx = LESSONS.findIndex((l) => l.id === activeLesson);
-
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#09090b",
-      color: "#e4e4e7",
-      fontFamily: "'Outfit', 'Satoshi', -apple-system, sans-serif",
-    }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-      `}</style>
-
-      <div style={{
-        background: "linear-gradient(160deg, #09090b 0%, #18181b 50%, #1a1025 100%)",
-        borderBottom: "1px solid #27272a",
-        padding: "20px 20px",
-      }}>
-        <div style={{ maxWidth: 920, margin: "0 auto" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-            <span style={{ fontSize: 26 }}>👑</span>
-            <h1 style={{
-              margin: 0, fontSize: 22, fontWeight: 900, letterSpacing: -0.5,
-              background: "linear-gradient(135deg, #ef4444, #f59e0b, #10b981)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-            }}>
-              Expert API Lab
-            </h1>
-            <span style={{
-              background: "linear-gradient(135deg, #ef444422, #f59e0b22)", color: "#ef4444", fontSize: 10, fontWeight: 800,
-              padding: "3px 8px", borderRadius: 6, letterSpacing: 1,
-            }}>NIVEL 3</span>
-          </div>
-          <p style={{ margin: 0, color: "#52525b", fontSize: 13 }}>API Design, GraphQL, Event-Driven, Security, Sistemas Distribuidos</p>
-          <div style={{ marginTop: 10, display: "flex", gap: 4, alignItems: "center" }}>
-            <div style={{ flex: 1, height: 3, background: "#27272a", borderRadius: 2 }}>
-              <div style={{
-                width: `${(visited.length / LESSONS.length) * 100}%`, height: 3,
-                background: "linear-gradient(90deg, #ef4444, #f59e0b, #10b981)", borderRadius: 2, transition: "width 0.5s",
-              }} />
-            </div>
-            <span style={{ color: "#52525b", fontSize: 11, marginLeft: 8 }}>{visited.length}/{LESSONS.length}</span>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 920, margin: "0 auto", padding: "14px 14px 40px" }}>
-        <div style={{ display: "flex", gap: 5, overflowX: "auto", paddingBottom: 6, marginBottom: 20, scrollbarWidth: "thin" }}>
-          {LESSONS.map((l) => (
-            <button key={l.id} onClick={() => navigate(l.id)} style={{
-              background: activeLesson === l.id ? "#18181b" : "transparent",
-              border: `1px solid ${activeLesson === l.id ? "#6366f1" : "transparent"}`,
-              borderRadius: 8, padding: "8px 12px", cursor: "pointer",
-              display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
-            }}>
-              <span style={{ fontSize: 14 }}>{visited.includes(l.id) && l.id !== activeLesson ? "✅" : l.icon}</span>
-              <span style={{ color: activeLesson === l.id ? "#e4e4e7" : "#52525b", fontSize: 12, fontWeight: activeLesson === l.id ? 700 : 500 }}>
-                {l.title}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: "#111113", borderRadius: 14, border: "1px solid #27272a", overflow: "hidden" }}>
-          <div style={{ padding: "18px 22px", borderBottom: "1px solid #27272a", display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 26 }}>{LESSONS[currentIdx].icon}</span>
-            <div>
-              <h2 style={{ margin: 0, fontSize: 19, fontWeight: 800 }}>{LESSONS[currentIdx].title}</h2>
-              <p style={{ margin: "2px 0 0", color: "#52525b", fontSize: 12 }}>{LESSONS[currentIdx].desc}</p>
-            </div>
-          </div>
-          <div style={{ padding: 22 }} key={activeLesson}>
-            {renderLesson()}
-          </div>
-        </div>
-
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 14 }}>
-          <button
-            onClick={() => navigate(LESSONS[Math.max(0, currentIdx - 1)].id)}
-            disabled={currentIdx === 0}
-            style={{
-              background: "#18181b", color: currentIdx === 0 ? "#27272a" : "#a1a1aa",
-              border: "1px solid #27272a", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 600,
-              cursor: currentIdx === 0 ? "default" : "pointer",
-            }}
-          >← Anterior</button>
-          <button
-            onClick={() => navigate(LESSONS[Math.min(LESSONS.length - 1, currentIdx + 1)].id)}
-            disabled={currentIdx === LESSONS.length - 1}
-            style={{
-              background: currentIdx === LESSONS.length - 1 ? "#18181b" : "linear-gradient(135deg, #ef4444, #f59e0b)",
-              color: currentIdx === LESSONS.length - 1 ? "#27272a" : "#fff",
-              border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 700,
-              cursor: currentIdx === LESSONS.length - 1 ? "default" : "pointer",
-            }}
-          >Siguiente →</button>
-        </div>
-      </div>
-    </div>
-  );
+    <LabLayout
+      icon="👑"
+      title="Expert API Lab"
+      titleClassName="text-xl font-black tracking-tight bg-gradient-to-r from-red-400 via-amber-400 to-emerald-400 bg-clip-text text-transparent"
+      subtitle="API Design, GraphQL, Event-Driven, Security, Sistemas Distribuidos"
+      levelLabel="NIVEL 3"
+      levelColor="red"
+      progressBarClassName="bg-gradient-to-r from-red-500 via-amber-500 to-emerald-500"
+      lessons={LESSONS}
+      activeLesson={activeLesson}
+      visited={visited}
+      onNavigate={navigate}
+    >
+      {renderLesson()}
+    </LabLayout>
+  )
 }

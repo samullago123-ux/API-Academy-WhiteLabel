@@ -1,13 +1,9 @@
-import { useState, useEffect, useRef } from "react";
-
-// ─── UTILS ───
-function getStatusColor(code) {
-  if (code >= 200 && code < 300) return "#10b981";
-  if (code >= 300 && code < 400) return "#eab308";
-  if (code >= 400 && code < 500) return "#f59e0b";
-  if (code >= 500) return "#ef4444";
-  return "#71717a";
-}
+import { useState } from 'react'
+import LabLayout from './components/LabLayout.jsx'
+import Quiz from './components/Quiz.jsx'
+import { simulateAPI } from './services/apiMock.js'
+import { cn } from './utils/cn.js'
+import { methodTone, statusTone } from './utils/tone.js'
 
 // ─── LESSONS CONFIG ───
 const LESSONS = [
@@ -20,123 +16,37 @@ const LESSONS = [
   { id: "quiz", title: "Quiz Final", icon: "🏆", desc: "Poné a prueba lo aprendido" },
 ];
 
-// ─── SIMULATED API SERVER ───
-const fakeDB = {
-  usuarios: [
-    { id: 1, nombre: "Daniel", email: "daniel@whitelabel.lat", rol: "admin" },
-    { id: 2, nombre: "Andrés", email: "andres@whitelabel.lat", rol: "dev" },
-    { id: 3, nombre: "María", email: "maria@ejemplo.com", rol: "user" },
-  ],
-  productos: [
-    { id: 1, nombre: "Plan Starter", precio: 99, moneda: "USD" },
-    { id: 2, nombre: "Plan Pro", precio: 299, moneda: "USD" },
-    { id: 3, nombre: "Plan Enterprise", precio: 799, moneda: "USD" },
-  ],
-};
-
-function simulateAPI(method, endpoint, body = null, headers = {}) {
-  const delay = 300 + Math.random() * 700;
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const parts = endpoint.split("/").filter(Boolean);
-      const resource = parts[0];
-      const id = parts[1] ? parseInt(parts[1]) : null;
-
-      if (!headers["Authorization"] && !headers["X-API-Key"]) {
-        resolve({ status: 401, statusText: "Unauthorized", body: { error: "No se proporcionó autenticación", message: "Incluí un header Authorization o X-API-Key" }, time: delay });
-        return;
-      }
-      if (!fakeDB[resource]) {
-        resolve({ status: 404, statusText: "Not Found", body: { error: "Recurso no encontrado", available: Object.keys(fakeDB) }, time: delay });
-        return;
-      }
-
-      switch (method) {
-        case "GET":
-          if (id) {
-            const item = fakeDB[resource].find((i) => i.id === id);
-            if (!item) resolve({ status: 404, statusText: "Not Found", body: { error: `${resource} con id ${id} no existe` }, time: delay });
-            else resolve({ status: 200, statusText: "OK", body: item, time: delay });
-          } else {
-            resolve({ status: 200, statusText: "OK", body: fakeDB[resource], time: delay });
-          }
-          break;
-        case "POST":
-          if (!body || !body.nombre) {
-            resolve({ status: 400, statusText: "Bad Request", body: { error: "El campo 'nombre' es requerido" }, time: delay });
-          } else {
-            const newItem = { id: fakeDB[resource].length + 1, ...body };
-            fakeDB[resource].push(newItem);
-            resolve({ status: 201, statusText: "Created", body: newItem, time: delay });
-          }
-          break;
-        case "PUT":
-          if (!id) {
-            resolve({ status: 400, statusText: "Bad Request", body: { error: "Se requiere un ID para actualizar" }, time: delay });
-          } else {
-            const idx = fakeDB[resource].findIndex((i) => i.id === id);
-            if (idx === -1) resolve({ status: 404, statusText: "Not Found", body: { error: `No existe ${resource} con id ${id}` }, time: delay });
-            else { fakeDB[resource][idx] = { id, ...body }; resolve({ status: 200, statusText: "OK", body: fakeDB[resource][idx], time: delay }); }
-          }
-          break;
-        case "PATCH":
-          if (!id) {
-            resolve({ status: 400, statusText: "Bad Request", body: { error: "Se requiere un ID para modificar" }, time: delay });
-          } else {
-            const idx = fakeDB[resource].findIndex((i) => i.id === id);
-            if (idx === -1) resolve({ status: 404, statusText: "Not Found", body: { error: `No existe ${resource} con id ${id}` }, time: delay });
-            else { fakeDB[resource][idx] = { ...fakeDB[resource][idx], ...body }; resolve({ status: 200, statusText: "OK", body: fakeDB[resource][idx], time: delay }); }
-          }
-          break;
-        case "DELETE":
-          if (!id) {
-            resolve({ status: 400, statusText: "Bad Request", body: { error: "Se requiere un ID para eliminar" }, time: delay });
-          } else {
-            const dIdx = fakeDB[resource].findIndex((i) => i.id === id);
-            if (dIdx === -1) resolve({ status: 404, statusText: "Not Found", body: { error: "No existe" }, time: delay });
-            else { const deleted = fakeDB[resource].splice(dIdx, 1)[0]; resolve({ status: 200, statusText: "OK", body: { message: "Eliminado exitosamente", deleted }, time: delay }); }
-          }
-          break;
-        default:
-          resolve({ status: 405, statusText: "Method Not Allowed", body: { error: "Método no soportado" }, time: delay });
-      }
-    }, delay);
-  });
-}
-
 // ─── ANATOMY LESSON ───
 function AnatomyLesson() {
   const [hoveredPart, setHoveredPart] = useState(null);
 
   const parts = [
-    { id: "method", text: "GET", color: "#f472b6", label: "MÉTODO", desc: "La acción que querés hacer. GET = leer datos. Como decirle al mesero: 'quiero ver el menú'." },
-    { id: "protocol", text: "https://", color: "#71717a", label: "PROTOCOLO", desc: "El idioma de comunicación. HTTPS = encriptado y seguro. Como hablar en código para que nadie espíe." },
-    { id: "host", text: "api.whitelabel.lat", color: "#60a5fa", label: "HOST", desc: "El servidor (la cocina del restaurante). Es a DÓNDE va tu petición." },
-    { id: "path", text: "/v1/usuarios", color: "#a78bfa", label: "PATH (RUTA)", desc: "El recurso específico. '/v1' es la versión de la API. '/usuarios' es QUÉ estás pidiendo." },
-    { id: "query", text: "?rol=admin&limit=10", color: "#fbbf24", label: "QUERY PARAMS", desc: "Filtros opcionales. Como decir: 'solo los que sean admin, y máximo 10 resultados'." },
+    { id: "method", text: "GET", tone: { text: "text-pink-300", border: "border-pink-400/60", bg: "bg-pink-500/20" }, label: "MÉTODO", desc: "La acción que querés hacer. GET = leer datos. Como decirle al mesero: 'quiero ver el menú'." },
+    { id: "protocol", text: "https://", tone: { text: "text-zinc-500", border: "border-zinc-600/60", bg: "bg-zinc-500/15" }, label: "PROTOCOLO", desc: "El idioma de comunicación. HTTPS = encriptado y seguro. Como hablar en código para que nadie espíe." },
+    { id: "host", text: "api.whitelabel.lat", tone: { text: "text-sky-300", border: "border-sky-400/60", bg: "bg-sky-500/20" }, label: "HOST", desc: "El servidor (la cocina del restaurante). Es a DÓNDE va tu petición." },
+    { id: "path", text: "/v1/usuarios", tone: { text: "text-violet-300", border: "border-violet-400/60", bg: "bg-violet-500/20" }, label: "PATH (RUTA)", desc: "El recurso específico. '/v1' es la versión de la API. '/usuarios' es QUÉ estás pidiendo." },
+    { id: "query", text: "?rol=admin&limit=10", tone: { text: "text-amber-300", border: "border-amber-400/60", bg: "bg-amber-500/20" }, label: "QUERY PARAMS", desc: "Filtros opcionales. Como decir: 'solo los que sean admin, y máximo 10 resultados'." },
   ];
 
   return (
     <div>
-      <p style={{ color: "#a1a1aa", marginBottom: 24, fontSize: 15, lineHeight: 1.7 }}>
+      <p className="mb-6 text-sm leading-relaxed text-zinc-400">
         Cada request HTTP es como una oración: tiene sujeto, verbo y complementos. Tocá cada parte para entender qué hace.
       </p>
 
-      <div style={{ background: "#09090b", borderRadius: 12, padding: "24px 20px", marginBottom: 20, overflowX: "auto", border: "1px solid #27272a" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: 16 }}>
+      <div className="mb-5 overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-950 px-5 py-6">
+        <div className="flex flex-wrap font-mono text-base">
           {parts.map((p) => (
             <span
               key={p.id}
               onMouseEnter={() => setHoveredPart(p.id)}
               onMouseLeave={() => setHoveredPart(null)}
               onClick={() => setHoveredPart(hoveredPart === p.id ? null : p.id)}
-              style={{
-                color: hoveredPart === p.id ? "#fff" : p.color,
-                background: hoveredPart === p.id ? p.color + "33" : "transparent",
-                padding: "4px 2px", borderRadius: 4, cursor: "pointer", transition: "all 0.2s",
-                borderBottom: `2px solid ${hoveredPart === p.id ? p.color : "transparent"}`,
-                marginRight: p.id === "method" ? 12 : 0,
-              }}
+              className={cn(
+                'cursor-pointer rounded px-1 py-1 transition-colors border-b-2',
+                p.id === 'method' && 'mr-3',
+                hoveredPart === p.id ? cn('text-white', p.tone.bg, p.tone.border) : cn(p.tone.text, 'border-transparent'),
+              )}
             >
               {p.text}
             </span>
@@ -147,37 +57,34 @@ function AnatomyLesson() {
       {hoveredPart && (() => {
         const p = parts.find((x) => x.id === hoveredPart);
         return (
-          <div style={{
-            background: p.color + "12", border: `1px solid ${p.color}33`,
-            borderRadius: 10, padding: 20, marginBottom: 16,
-          }}>
-            <div style={{ color: p.color, fontWeight: 700, fontSize: 12, letterSpacing: 1.5, marginBottom: 8 }}>{p.label}</div>
-            <div style={{ color: "#e4e4e7", fontSize: 15, lineHeight: 1.6 }}>{p.desc}</div>
+          <div className={cn('mb-4 rounded-xl border px-5 py-5', p.tone.bg, p.tone.border)}>
+            <div className={cn('mb-2 text-xs font-bold tracking-[0.2em]', p.tone.text)}>{p.label}</div>
+            <div className="text-sm leading-relaxed text-zinc-100">{p.desc}</div>
           </div>
         );
       })()}
 
-      <div style={{ background: "#18181b", borderRadius: 10, padding: 20, marginTop: 20, border: "1px solid #27272a" }}>
-        <div style={{ color: "#f59e0b", fontWeight: 700, fontSize: 12, letterSpacing: 1, marginBottom: 12 }}>💡 ANALOGÍA COMPLETA</div>
-        <div style={{ color: "#a1a1aa", fontSize: 14, lineHeight: 1.8 }}>
-          <strong style={{ color: "#f472b6" }}>GET</strong> → "Quiero ver" &nbsp;|&nbsp;
-          <strong style={{ color: "#60a5fa" }}>api.whitelabel.lat</strong> → "el restaurante" &nbsp;|&nbsp;
-          <strong style={{ color: "#a78bfa" }}>/v1/usuarios</strong> → "la carta de usuarios" &nbsp;|&nbsp;
-          <strong style={{ color: "#fbbf24" }}>?rol=admin</strong> → "solo los administradores"
+      <div className="mt-5 rounded-xl border border-zinc-800 bg-zinc-900 px-5 py-5">
+        <div className="mb-3 text-xs font-bold tracking-widest text-amber-400">💡 ANALOGÍA COMPLETA</div>
+        <div className="text-sm leading-relaxed text-zinc-400">
+          <strong className="text-pink-300">GET</strong> → "Quiero ver" &nbsp;|&nbsp;
+          <strong className="text-sky-300">api.whitelabel.lat</strong> → "el restaurante" &nbsp;|&nbsp;
+          <strong className="text-violet-300">/v1/usuarios</strong> → "la carta de usuarios" &nbsp;|&nbsp;
+          <strong className="text-amber-300">?rol=admin</strong> → "solo los administradores"
         </div>
       </div>
 
-      <div style={{ background: "#18181b", borderRadius: 10, padding: 20, marginTop: 16, border: "1px solid #27272a" }}>
-        <div style={{ color: "#10b981", fontWeight: 700, fontSize: 12, letterSpacing: 1, marginBottom: 12 }}>🔄 EL CICLO COMPLETO</div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap", padding: "12px 0" }}>
+      <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900 px-5 py-5">
+        <div className="mb-3 text-xs font-bold tracking-widest text-emerald-400">🔄 EL CICLO COMPLETO</div>
+        <div className="flex flex-wrap items-center justify-center gap-3 py-3">
           {["Tu App", "→ Request →", "Servidor API", "→ Procesa →", "Base de Datos", "→ Response →", "Tu App"].map((step, i) => (
-            <div key={i} style={{
-              padding: "8px 14px", borderRadius: 8,
-              background: i % 2 === 0 ? "#27272a" : "transparent",
-              color: i % 2 === 0 ? "#e4e4e7" : "#6366f1",
-              fontSize: 13, fontWeight: i % 2 === 0 ? 600 : 400,
-              fontFamily: i % 2 !== 0 ? "monospace" : "inherit",
-            }}>
+            <div
+              key={i}
+              className={cn(
+                'rounded-lg px-3 py-2 text-xs',
+                i % 2 === 0 ? 'bg-zinc-800 text-zinc-100 font-semibold' : 'font-mono text-indigo-300',
+              )}
+            >
               {step}
             </div>
           ))}
@@ -194,11 +101,11 @@ function MethodsLesson() {
   const [loading, setLoading] = useState(false);
 
   const methods = [
-    { name: "GET", color: "#10b981", emoji: "📖", analogy: "LEER", desc: "Obtener datos sin modificar nada. Idempotente: podés llamarlo 100 veces y el resultado es el mismo.", example: { endpoint: "usuarios", body: null }, realWorld: "Ver tu perfil, cargar una lista de productos, consultar el clima" },
-    { name: "POST", color: "#3b82f6", emoji: "✍️", analogy: "CREAR", desc: "Crear un recurso nuevo. NO es idempotente: cada llamada crea algo nuevo.", example: { endpoint: "usuarios", body: { nombre: "Nuevo User", email: "nuevo@test.com", rol: "user" } }, realWorld: "Registrar un usuario, enviar un mensaje, crear una orden" },
-    { name: "PUT", color: "#f59e0b", emoji: "🔄", analogy: "ACTUALIZAR", desc: "Reemplazar un recurso completo. Idempotente: actualizarlo 100 veces da el mismo resultado.", example: { endpoint: "usuarios/1", body: { nombre: "Daniel Actualizado", email: "daniel@whitelabel.lat" } }, realWorld: "Editar tu perfil completo, actualizar un producto" },
-    { name: "PATCH", color: "#a855f7", emoji: "🩹", analogy: "MODIFICAR", desc: "Actualizar parcialmente un recurso. Solo enviás los campos que cambian, no todo el objeto completo.", example: { endpoint: "usuarios/1", body: { email: "nuevo@correo.com" } }, realWorld: "Actualizar solo tu foto de perfil o tu contraseña" },
-    { name: "DELETE", color: "#ef4444", emoji: "🗑️", analogy: "ELIMINAR", desc: "Borrar un recurso. Idempotente: borrar algo que ya no existe no causa error (en teoría).", example: { endpoint: "productos/3", body: null }, realWorld: "Eliminar un post, cancelar una suscripción, borrar un archivo" },
+    { name: "GET", emoji: "📖", analogy: "LEER", desc: "Obtener datos sin modificar nada. Idempotente: podés llamarlo 100 veces y el resultado es el mismo.", example: { endpoint: "usuarios", body: null }, realWorld: "Ver tu perfil, cargar una lista de productos, consultar el clima" },
+    { name: "POST", emoji: "✍️", analogy: "CREAR", desc: "Crear un recurso nuevo. NO es idempotente: cada llamada crea algo nuevo.", example: { endpoint: "usuarios", body: { nombre: "Nuevo User", email: "nuevo@test.com", rol: "user" } }, realWorld: "Registrar un usuario, enviar un mensaje, crear una orden" },
+    { name: "PUT", emoji: "🔄", analogy: "ACTUALIZAR", desc: "Reemplazar un recurso completo. Idempotente: actualizarlo 100 veces da el mismo resultado.", example: { endpoint: "usuarios/1", body: { nombre: "Daniel Actualizado", email: "daniel@whitelabel.lat" } }, realWorld: "Editar tu perfil completo, actualizar un producto" },
+    { name: "PATCH", emoji: "🩹", analogy: "MODIFICAR", desc: "Actualizar parcialmente un recurso. Solo enviás los campos que cambian, no todo el objeto completo.", example: { endpoint: "usuarios/1", body: { email: "nuevo@correo.com" } }, realWorld: "Actualizar solo tu foto de perfil o tu contraseña" },
+    { name: "DELETE", emoji: "🗑️", analogy: "ELIMINAR", desc: "Borrar un recurso. Idempotente: borrar algo que ya no existe no causa error (en teoría).", example: { endpoint: "productos/3", body: null }, realWorld: "Eliminar un post, cancelar una suscripción, borrar un archivo" },
   ];
 
   const active = methods.find((m) => m.name === activeMethod);
@@ -212,63 +119,72 @@ function MethodsLesson() {
 
   return (
     <div>
-      <p style={{ color: "#a1a1aa", marginBottom: 20, fontSize: 15, lineHeight: 1.7 }}>
-        Los métodos HTTP representan las 4 operaciones fundamentales sobre datos (<strong style={{ color: "#e4e4e7" }}>CRUD</strong>). Tocá cada uno y ejecutá el ejemplo.
+      <p className="mb-5 text-sm leading-relaxed text-zinc-400">
+        Los métodos HTTP representan las 4 operaciones fundamentales sobre datos (<strong className="text-zinc-100">CRUD</strong>). Tocá cada uno y ejecutá el ejemplo.
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, marginBottom: 24 }}>
+      <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         {methods.map((m) => (
-          <button key={m.name} onClick={() => { setActiveMethod(m.name); setResult(null); }} style={{
-            background: activeMethod === m.name ? m.color + "15" : "transparent",
-            border: `2px solid ${activeMethod === m.name ? m.color : "#27272a"}`,
-            borderRadius: 12, padding: "14px 8px", cursor: "pointer", textAlign: "center", transition: "all 0.2s",
-          }}>
-            <div style={{ fontSize: 22, marginBottom: 4 }}>{m.emoji}</div>
-            <div style={{ color: m.color, fontWeight: 800, fontSize: 14, fontFamily: "monospace" }}>{m.name}</div>
-            <div style={{ color: "#52525b", fontSize: 11, marginTop: 2 }}>{m.analogy}</div>
+          <button
+            key={m.name}
+            onClick={() => {
+              setActiveMethod(m.name)
+              setResult(null)
+            }}
+            className={cn(
+              'rounded-xl border-2 px-3 py-3 text-center transition-colors',
+              activeMethod === m.name ? cn(methodTone(m.name).bg, methodTone(m.name).border) : 'border-zinc-800 hover:bg-zinc-900',
+            )}
+          >
+            <div className="text-2xl">{m.emoji}</div>
+            <div className={cn('mt-1 font-mono text-sm font-extrabold', methodTone(m.name).text)}>{m.name}</div>
+            <div className="mt-1 text-[11px] text-zinc-500">{m.analogy}</div>
           </button>
         ))}
       </div>
 
-      <div style={{ background: "#09090b", borderRadius: 12, padding: 20, border: `1px solid ${active.color}33`, marginBottom: 20 }}>
-        <div style={{ color: "#e4e4e7", fontSize: 15, lineHeight: 1.7, marginBottom: 16 }}>{active.desc}</div>
+      <div className="mb-5 rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+        <div className="mb-4 text-sm leading-relaxed text-zinc-100">{active.desc}</div>
 
-        <div style={{ background: "#18181b", borderRadius: 8, padding: 16, marginBottom: 16, fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}>
-          <span style={{ color: active.color, fontWeight: 700 }}>{active.name}</span>{" "}
-          <span style={{ color: "#52525b" }}>https://api.ejemplo.com/</span>
-          <span style={{ color: "#e4e4e7" }}>{active.example.endpoint}</span>
+        <div className="mb-4 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-4 font-mono text-sm text-zinc-300">
+          <span className={cn('font-bold', methodTone(active.name).text)}>{active.name}</span>{' '}
+          <span className="text-zinc-500">https://api.ejemplo.com/</span>
+          <span className="text-zinc-100">{active.example.endpoint}</span>
           {active.example.body && (
-            <div style={{ color: "#f59e0b", marginTop: 8 }}>
-              Body: {JSON.stringify(active.example.body, null, 2)}
-            </div>
+            <div className="mt-3 text-amber-300">Body: {JSON.stringify(active.example.body, null, 2)}</div>
           )}
         </div>
 
-        <div style={{ color: "#71717a", fontSize: 13, marginBottom: 16 }}>
-          <strong style={{ color: "#a1a1aa" }}>Uso real:</strong> {active.realWorld}
+        <div className="mb-4 text-sm text-zinc-500">
+          <strong className="text-zinc-400">Uso real:</strong> {active.realWorld}
         </div>
 
-        <button onClick={runExample} disabled={loading} style={{
-          background: active.color, color: "#fff", border: "none", borderRadius: 8,
-          padding: "10px 24px", fontWeight: 700, fontSize: 14, cursor: loading ? "wait" : "pointer",
-          opacity: loading ? 0.6 : 1,
-        }}>
+        <button
+          onClick={runExample}
+          disabled={loading}
+          className={cn(
+            'inline-flex h-10 items-center justify-center rounded-xl px-5 text-sm font-bold text-white transition-colors',
+            loading ? 'cursor-wait opacity-70' : 'hover:opacity-95',
+            active.name === 'GET' && 'bg-emerald-500',
+            active.name === 'POST' && 'bg-sky-500',
+            active.name === 'PUT' && 'bg-amber-500',
+            active.name === 'PATCH' && 'bg-violet-500',
+            active.name === 'DELETE' && 'bg-red-500',
+          )}
+        >
           {loading ? "⏳ Enviando..." : `▶ Ejecutar ${active.name}`}
         </button>
       </div>
 
       {result && (
-        <div style={{
-          background: "#09090b", borderRadius: 10, padding: 16,
-          borderLeft: `4px solid ${getStatusColor(result.status)}`, border: "1px solid #27272a",
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-            <span style={{ color: getStatusColor(result.status), fontWeight: 700, fontFamily: "monospace" }}>
+        <div className={cn('rounded-xl border border-zinc-800 bg-zinc-950 p-4 border-l-4', statusTone(result.status).border)}>
+          <div className="mb-3 flex items-center justify-between">
+            <span className={cn('font-mono font-bold', statusTone(result.status).text)}>
               {result.status} {result.statusText}
             </span>
-            <span style={{ color: "#52525b", fontSize: 12 }}>{Math.round(result.time)}ms</span>
+            <span className="text-xs text-zinc-500">{Math.round(result.time)}ms</span>
           </div>
-          <pre style={{ color: "#a1a1aa", fontSize: 13, margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+          <pre className="m-0 whitespace-pre-wrap font-mono text-sm leading-relaxed text-zinc-400">
             {JSON.stringify(result.body, null, 2)}
           </pre>
         </div>
@@ -299,40 +215,40 @@ function StatusLesson() {
 
   return (
     <div>
-      <p style={{ color: "#a1a1aa", marginBottom: 16, fontSize: 15, lineHeight: 1.7 }}>
-        Los códigos de estado te dicen <strong style={{ color: "#e4e4e7" }}>qué pasó</strong> con tu petición. La regla de oro:
+      <p className="mb-4 text-sm leading-relaxed text-zinc-400">
+        Los códigos de estado te dicen <strong className="text-zinc-100">qué pasó</strong> con tu petición. La regla de oro:
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 24 }}>
+      <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
-          { range: "2xx", label: "Éxito", color: "#10b981", emoji: "✅" },
-          { range: "3xx", label: "Redirección", color: "#eab308", emoji: "↗️" },
-          { range: "4xx", label: "Error tuyo", color: "#f59e0b", emoji: "🤦" },
-          { range: "5xx", label: "Error servidor", color: "#ef4444", emoji: "💥" },
+          { range: "2xx", label: "Éxito", tone: { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-400/20" }, emoji: "✅" },
+          { range: "3xx", label: "Redirección", tone: { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-400/20" }, emoji: "↗️" },
+          { range: "4xx", label: "Error tuyo", tone: { text: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-400/20" }, emoji: "🤦" },
+          { range: "5xx", label: "Error servidor", tone: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-400/20" }, emoji: "💥" },
         ].map((f) => (
-          <div key={f.range} style={{
-            background: f.color + "12", borderRadius: 10, padding: "10px 12px",
-            textAlign: "center", border: `1px solid ${f.color}22`,
-          }}>
-            <div style={{ fontSize: 18 }}>{f.emoji}</div>
-            <div style={{ color: f.color, fontWeight: 800, fontFamily: "monospace", fontSize: 16 }}>{f.range}</div>
-            <div style={{ color: "#52525b", fontSize: 11 }}>{f.label}</div>
+          <div key={f.range} className={cn('rounded-xl border px-3 py-3 text-center', f.tone.bg, f.tone.border)}>
+            <div className="text-lg">{f.emoji}</div>
+            <div className={cn('font-mono text-base font-extrabold', f.tone.text)}>{f.range}</div>
+            <div className="text-[11px] text-zinc-500">{f.label}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 8 }}>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         {codes.map((c) => (
-          <button key={c.code} onClick={() => setSelected(selected === c.code ? null : c.code)} style={{
-            background: selected === c.code ? c.color + "18" : "#18181b",
-            border: `1px solid ${selected === c.code ? c.color : "#27272a"}`,
-            borderRadius: 10, padding: "10px 12px", cursor: "pointer", textAlign: "left", transition: "all 0.15s",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 14 }}>{c.emoji}</span>
-              <span style={{ color: c.color, fontWeight: 800, fontFamily: "monospace", fontSize: 15 }}>{c.code}</span>
+          <button
+            key={c.code}
+            onClick={() => setSelected(selected === c.code ? null : c.code)}
+            className={cn(
+              'rounded-xl border px-3 py-3 text-left transition-colors',
+              selected === c.code ? cn(statusTone(c.code).bg, statusTone(c.code).border) : 'border-zinc-800 bg-zinc-900 hover:bg-zinc-800',
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-sm">{c.emoji}</span>
+              <span className={cn('font-mono text-sm font-extrabold', statusTone(c.code).text)}>{c.code}</span>
             </div>
-            <div style={{ color: "#52525b", fontSize: 11, marginTop: 4 }}>{c.text}</div>
+            <div className="mt-1 text-[11px] text-zinc-500">{c.text}</div>
           </button>
         ))}
       </div>
@@ -340,16 +256,13 @@ function StatusLesson() {
       {selected && (() => {
         const c = codes.find((x) => x.code === selected);
         return (
-          <div style={{
-            background: c.color + "10", border: `1px solid ${c.color}33`,
-            borderRadius: 10, padding: 20, marginTop: 16,
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-              <span style={{ fontSize: 24 }}>{c.emoji}</span>
-              <span style={{ color: c.color, fontWeight: 800, fontFamily: "monospace", fontSize: 22 }}>{c.code}</span>
-              <span style={{ color: "#e4e4e7", fontWeight: 600 }}>{c.text}</span>
+          <div className={cn('mt-4 rounded-xl border px-5 py-5', statusTone(c.code).bg, statusTone(c.code).border)}>
+            <div className="mb-2 flex items-center gap-3">
+              <span className="text-2xl">{c.emoji}</span>
+              <span className={cn('font-mono text-2xl font-black', statusTone(c.code).text)}>{c.code}</span>
+              <span className="font-semibold text-zinc-100">{c.text}</span>
             </div>
-            <div style={{ color: "#a1a1aa", fontSize: 15, lineHeight: 1.7 }}>{c.desc}</div>
+            <div className="text-sm leading-relaxed text-zinc-400">{c.desc}</div>
           </div>
         );
       })()}
@@ -380,60 +293,60 @@ function HeadersLesson() {
 
   return (
     <div>
-      <p style={{ color: "#a1a1aa", marginBottom: 20, fontSize: 15, lineHeight: 1.7 }}>
-        Los headers son <strong style={{ color: "#e4e4e7" }}>metadatos</strong> de la petición. Viajan "fuera" del body, como el remitente y sellos en un sobre.
+      <p className="mb-5 text-sm leading-relaxed text-zinc-400">
+        Los headers son <strong className="text-zinc-100">metadatos</strong> de la petición. Viajan "fuera" del body, como el remitente y sellos en un sobre.
       </p>
 
-      <div style={{ display: "grid", gap: 8, marginBottom: 28 }}>
+      <div className="mb-7 grid gap-2">
         {headerExamples.map((h) => (
-          <div key={h.name} style={{
-            background: "#09090b", borderRadius: 10, padding: "12px 16px",
-            display: "flex", gap: 16, alignItems: "flex-start", border: "1px solid #27272a",
-          }}>
-            <div style={{ minWidth: 160 }}>
-              <div style={{ color: "#a78bfa", fontFamily: "monospace", fontWeight: 700, fontSize: 13 }}>{h.name}</div>
-              <div style={{ color: "#3f3f46", fontFamily: "monospace", fontSize: 11, marginTop: 2 }}>{h.value}</div>
+          <div key={h.name} className="flex gap-4 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3">
+            <div className="min-w-40">
+              <div className="font-mono text-sm font-bold text-violet-300">{h.name}</div>
+              <div className="mt-1 font-mono text-xs text-zinc-600">{h.value}</div>
             </div>
-            <div style={{ color: "#71717a", fontSize: 13, lineHeight: 1.5 }}>{h.desc}</div>
+            <div className="text-sm leading-relaxed text-zinc-500">{h.desc}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ color: "#f59e0b", fontWeight: 700, fontSize: 12, letterSpacing: 1, marginBottom: 16 }}>🔐 TIPOS DE AUTENTICACIÓN</div>
+      <div className="mb-4 text-xs font-bold tracking-widest text-amber-400">🔐 TIPOS DE AUTENTICACIÓN</div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 20 }}>
+      <div className="mb-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
         {authTypes.map((a) => (
-          <button key={a.id} onClick={() => setAuthType(a.id)} style={{
-            background: authType === a.id ? "#18181b" : "transparent",
-            border: `2px solid ${authType === a.id ? "#6366f1" : "#27272a"}`,
-            borderRadius: 12, padding: "14px 12px", cursor: "pointer", textAlign: "center", transition: "all 0.2s",
-          }}>
-            <div style={{ fontSize: 22 }}>{a.icon}</div>
-            <div style={{ color: authType === a.id ? "#e4e4e7" : "#71717a", fontWeight: 700, fontSize: 13, marginTop: 4 }}>{a.name}</div>
+          <button
+            key={a.id}
+            onClick={() => setAuthType(a.id)}
+            className={cn(
+              'rounded-xl border-2 px-4 py-4 text-center transition-colors',
+              authType === a.id ? 'border-indigo-400/70 bg-zinc-900' : 'border-zinc-800 hover:bg-zinc-900',
+            )}
+          >
+            <div className="text-2xl">{a.icon}</div>
+            <div className={cn('mt-1 text-sm font-bold', authType === a.id ? 'text-zinc-100' : 'text-zinc-500')}>{a.name}</div>
           </button>
         ))}
       </div>
 
-      <div style={{ background: "#09090b", borderRadius: 12, padding: 20, border: "1px solid #27272a" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-          <span style={{ fontSize: 20 }}>{activeAuth.icon}</span>
-          <span style={{ color: "#e4e4e7", fontWeight: 700, fontSize: 16 }}>{activeAuth.name}</span>
+      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-xl">{activeAuth.icon}</span>
+          <span className="text-base font-bold text-zinc-100">{activeAuth.name}</span>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-          <div style={{ background: "#10b98112", borderRadius: 8, padding: 12, border: "1px solid #10b98122" }}>
-            <div style={{ color: "#10b981", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>✅ PROS</div>
-            <div style={{ color: "#a1a1aa", fontSize: 12 }}>{activeAuth.pros}</div>
+        <div className="mb-4 grid gap-2 sm:grid-cols-2">
+          <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3">
+            <div className="mb-1 text-[11px] font-bold text-emerald-400">✅ PROS</div>
+            <div className="text-sm text-zinc-300">{activeAuth.pros}</div>
           </div>
-          <div style={{ background: "#ef444412", borderRadius: 8, padding: 12, border: "1px solid #ef444422" }}>
-            <div style={{ color: "#ef4444", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>⚠️ CONTRAS</div>
-            <div style={{ color: "#a1a1aa", fontSize: 12 }}>{activeAuth.cons}</div>
+          <div className="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3">
+            <div className="mb-1 text-[11px] font-bold text-red-400">⚠️ CONTRAS</div>
+            <div className="text-sm text-zinc-300">{activeAuth.cons}</div>
           </div>
         </div>
-        <div style={{ background: "#18181b", borderRadius: 8, padding: 12, marginBottom: 12, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "#a1a1aa", whiteSpace: "pre-wrap", lineHeight: 1.7 }}>
+        <div className="mb-3 whitespace-pre-wrap rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 font-mono text-xs leading-relaxed text-zinc-300">
           {activeAuth.example}
         </div>
-        <div style={{ color: "#52525b", fontSize: 12 }}>
-          <strong style={{ color: "#71717a" }}>Caso de uso:</strong> {activeAuth.useCase}
+        <div className="text-xs text-zinc-500">
+          <strong className="text-zinc-400">Caso de uso:</strong> {activeAuth.useCase}
         </div>
       </div>
     </div>
@@ -468,87 +381,72 @@ function JSONLesson() {
     const types = [];
     for (const [key, val] of Object.entries(obj)) {
       const path = prefix ? `${prefix}.${key}` : key;
-      if (val === null) types.push({ path, type: "null", val: "null", color: "#71717a" });
-      else if (Array.isArray(val)) types.push({ path, type: "array", val: `[${val.length} items]`, color: "#f472b6" });
+      if (val === null) types.push({ path, type: "null", val: "null", colorClass: "text-zinc-400" });
+      else if (Array.isArray(val)) types.push({ path, type: "array", val: `[${val.length} items]`, colorClass: "text-pink-300" });
       else if (typeof val === "object") {
-        types.push({ path, type: "object", val: "{...}", color: "#a78bfa" });
+        types.push({ path, type: "object", val: "{...}", colorClass: "text-violet-300" });
         types.push(...analyzeTypes(val, path));
       }
-      else if (typeof val === "string") types.push({ path, type: "string", val: `"${val}"`, color: "#10b981" });
-      else if (typeof val === "number") types.push({ path, type: "number", val: String(val), color: "#60a5fa" });
-      else if (typeof val === "boolean") types.push({ path, type: "boolean", val: String(val), color: "#fbbf24" });
+      else if (typeof val === "string") types.push({ path, type: "string", val: `"${val}"`, colorClass: "text-emerald-300" });
+      else if (typeof val === "number") types.push({ path, type: "number", val: String(val), colorClass: "text-sky-300" });
+      else if (typeof val === "boolean") types.push({ path, type: "boolean", val: String(val), colorClass: "text-amber-300" });
     }
     return types;
   }
 
   const dataTypes = [
-    { type: "string", example: '"texto"', color: "#10b981", desc: "Texto entre comillas dobles" },
-    { type: "number", example: "42, 3.14", color: "#60a5fa", desc: "Enteros o decimales, SIN comillas" },
-    { type: "boolean", example: "true / false", color: "#fbbf24", desc: "Verdadero o falso, SIN comillas" },
-    { type: "null", example: "null", color: "#71717a", desc: "Ausencia de valor, SIN comillas" },
-    { type: "array", example: '[1, "a", true]', color: "#f472b6", desc: "Lista ordenada de valores" },
-    { type: "object", example: '{"key": "val"}', color: "#a78bfa", desc: "Pares clave-valor (diccionario)" },
+    { type: "string", example: '"texto"', colorClass: "text-emerald-300", desc: "Texto entre comillas dobles" },
+    { type: "number", example: "42, 3.14", colorClass: "text-sky-300", desc: "Enteros o decimales, SIN comillas" },
+    { type: "boolean", example: "true / false", colorClass: "text-amber-300", desc: "Verdadero o falso, SIN comillas" },
+    { type: "null", example: "null", colorClass: "text-zinc-400", desc: "Ausencia de valor, SIN comillas" },
+    { type: "array", example: '[1, "a", true]', colorClass: "text-pink-300", desc: "Lista ordenada de valores" },
+    { type: "object", example: '{"key": "val"}', colorClass: "text-violet-300", desc: "Pares clave-valor (diccionario)" },
   ];
 
   return (
     <div>
-      <p style={{ color: "#a1a1aa", marginBottom: 12, fontSize: 15, lineHeight: 1.7 }}>
-        JSON (JavaScript Object Notation) es el <strong style={{ color: "#e4e4e7" }}>formato universal</strong> para enviar y recibir datos en APIs. Es legible por humanos y por máquinas.
+      <p className="mb-3 text-sm leading-relaxed text-zinc-400">
+        JSON (JavaScript Object Notation) es el <strong className="text-zinc-100">formato universal</strong> para enviar y recibir datos en APIs. Es legible por humanos y por máquinas.
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 20 }}>
+      <div className="mb-5 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {dataTypes.map((d) => (
-          <div key={d.type} style={{ background: "#09090b", borderRadius: 10, padding: "10px 12px", border: "1px solid #27272a" }}>
-            <div style={{ color: d.color, fontWeight: 800, fontFamily: "monospace", fontSize: 13 }}>{d.type}</div>
-            <div style={{ color: "#e4e4e7", fontFamily: "monospace", fontSize: 12, margin: "4px 0" }}>{d.example}</div>
-            <div style={{ color: "#52525b", fontSize: 11 }}>{d.desc}</div>
+          <div key={d.type} className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3">
+            <div className={cn('font-mono text-sm font-extrabold', d.colorClass)}>{d.type}</div>
+            <div className="my-1 font-mono text-xs text-zinc-100">{d.example}</div>
+            <div className="text-[11px] text-zinc-500">{d.desc}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ color: "#f59e0b", fontWeight: 700, fontSize: 12, letterSpacing: 1, marginBottom: 10 }}>🧪 EDITOR INTERACTIVO — Editá y validá JSON</div>
+      <div className="mb-2 text-xs font-bold tracking-widest text-amber-400">🧪 EDITOR INTERACTIVO — Editá y validá JSON</div>
       <textarea
         value={jsonInput}
         onChange={(e) => { setJsonInput(e.target.value); setParseResult(null); }}
-        style={{
-          width: "100%", minHeight: 160, background: "#09090b", color: "#e4e4e7",
-          border: "1px solid #27272a", borderRadius: 10, padding: 14,
-          fontFamily: "'JetBrains Mono', monospace", fontSize: 13, lineHeight: 1.6,
-          resize: "vertical", boxSizing: "border-box", outline: "none",
-        }}
+        className="min-h-40 w-full resize-y rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 font-mono text-sm leading-relaxed text-zinc-100 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70"
         spellCheck={false}
       />
-      <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-        <button onClick={tryParse} style={{
-          background: "#6366f1", color: "#fff", border: "none", borderRadius: 8,
-          padding: "10px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer",
-        }}>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button onClick={tryParse} className="inline-flex h-10 items-center justify-center rounded-xl bg-indigo-500 px-4 text-sm font-bold text-white transition-colors hover:bg-indigo-400">
           ✓ Validar JSON
         </button>
-        <button onClick={() => setShowTypes(!showTypes)} style={{
-          background: "#27272a", color: "#a1a1aa", border: "none", borderRadius: 8,
-          padding: "10px 20px", fontSize: 13, cursor: "pointer",
-        }}>
+        <button onClick={() => setShowTypes(!showTypes)} className="inline-flex h-10 items-center justify-center rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-zinc-300 transition-colors hover:bg-zinc-800">
           {showTypes ? "Ocultar" : "Mostrar"} tipos
         </button>
       </div>
 
       {parseResult && (
-        <div style={{
-          marginTop: 12, background: parseResult.valid ? "#10b98110" : "#ef444415",
-          border: `1px solid ${parseResult.valid ? "#10b98133" : "#ef444433"}`,
-          borderRadius: 10, padding: 16,
-        }}>
+        <div className={cn('mt-3 rounded-xl border px-4 py-4', parseResult.valid ? 'border-emerald-400/30 bg-emerald-500/10' : 'border-red-400/30 bg-red-500/10')}>
           {parseResult.valid ? (
             <>
-              <div style={{ color: "#10b981", fontWeight: 700, marginBottom: 8 }}>✅ JSON válido</div>
+              <div className="mb-2 font-bold text-emerald-400">✅ JSON válido</div>
               {showTypes && (
-                <div style={{ display: "grid", gap: 4 }}>
+                <div className="grid gap-1">
                   {parseResult.types.map((t, i) => (
-                    <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 13, fontFamily: "monospace" }}>
-                      <span style={{ color: "#71717a", minWidth: 180 }}>{t.path}</span>
-                      <span style={{ color: t.color, fontWeight: 700, minWidth: 60 }}>{t.type}</span>
-                      <span style={{ color: "#52525b" }}>{t.val}</span>
+                    <div key={i} className="flex flex-wrap items-center gap-3 font-mono text-xs">
+                      <span className="min-w-44 text-zinc-500">{t.path}</span>
+                      <span className={cn('min-w-16 font-bold', t.colorClass)}>{t.type}</span>
+                      <span className="text-zinc-400">{t.val}</span>
                     </div>
                   ))}
                 </div>
@@ -556,20 +454,20 @@ function JSONLesson() {
             </>
           ) : (
             <>
-              <div style={{ color: "#ef4444", fontWeight: 700, marginBottom: 4 }}>❌ JSON inválido</div>
-              <div style={{ color: "#fca5a5", fontSize: 13, fontFamily: "monospace" }}>{parseResult.error}</div>
+              <div className="mb-1 font-bold text-red-400">❌ JSON inválido</div>
+              <div className="font-mono text-xs text-red-200">{parseResult.error}</div>
             </>
           )}
         </div>
       )}
 
-      <div style={{ background: "#18181b", borderRadius: 10, padding: 16, marginTop: 20, border: "1px solid #27272a" }}>
-        <div style={{ color: "#ef4444", fontWeight: 700, fontSize: 12, letterSpacing: 1, marginBottom: 10 }}>⚠️ ERRORES COMUNES EN JSON</div>
-        <div style={{ color: "#a1a1aa", fontSize: 13, lineHeight: 2 }}>
-          <span style={{ color: "#ef4444", fontFamily: "monospace" }}>{'{ nombre: "test" }'}</span> → Las keys SIEMPRE van con comillas dobles<br/>
-          <span style={{ color: "#ef4444", fontFamily: "monospace" }}>{"{ \"a\": 'test' }"}</span> → Comillas DOBLES, nunca simples<br/>
-          <span style={{ color: "#ef4444", fontFamily: "monospace" }}>{'{ "a": 1, }'}</span> → No se permite coma al final (trailing comma)<br/>
-          <span style={{ color: "#ef4444", fontFamily: "monospace" }}>{'{ "a": undefined }'}</span> → No existe undefined en JSON, usá null
+      <div className="mt-5 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-4">
+        <div className="mb-2 text-xs font-bold tracking-widest text-red-400">⚠️ ERRORES COMUNES EN JSON</div>
+        <div className="text-sm leading-loose text-zinc-400">
+          <span className="font-mono text-red-300">{'{ nombre: "test" }'}</span> → Las keys SIEMPRE van con comillas dobles<br/>
+          <span className="font-mono text-red-300">{'{ "a": \'test\' }'}</span> → Comillas DOBLES, nunca simples<br/>
+          <span className="font-mono text-red-300">{'{ "a": 1, }'}</span> → No se permite coma al final (trailing comma)<br/>
+          <span className="font-mono text-red-300">{'{ "a": undefined }'}</span> → No existe undefined en JSON, usá null
         </div>
       </div>
     </div>
@@ -586,7 +484,7 @@ function PlaygroundLesson() {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
 
-  const methodColors = { GET: "#10b981", POST: "#3b82f6", PUT: "#f59e0b", PATCH: "#a855f7", DELETE: "#ef4444" };
+  const methods = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
   async function sendRequest() {
     setLoading(true);
@@ -607,80 +505,92 @@ function PlaygroundLesson() {
 
   return (
     <div>
-      <p style={{ color: "#a1a1aa", marginBottom: 20, fontSize: 15, lineHeight: 1.7 }}>
-        Este es tu sandbox. Hacé requests a una <strong style={{ color: "#e4e4e7" }}>API simulada</strong> con datos reales. Probá diferentes combinaciones y mirá qué pasa.
+      <p className="mb-5 text-sm leading-relaxed text-zinc-400">
+        Este es tu sandbox. Hacé requests a una <strong className="text-zinc-100">API simulada</strong> con datos reales. Probá diferentes combinaciones y mirá qué pasa.
       </p>
 
-      <div style={{ display: "grid", gap: 12, marginBottom: 20 }}>
+      <div className="mb-5 grid gap-3">
         <div>
-          <label style={{ color: "#71717a", fontSize: 12, fontWeight: 700, display: "block", marginBottom: 6, letterSpacing: 1 }}>MÉTODO</label>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {["GET", "POST", "PUT", "PATCH", "DELETE"].map((m) => (
-              <button key={m} onClick={() => setMethod(m)} style={{
-                background: method === m ? methodColors[m] + "18" : "transparent",
-                border: `2px solid ${method === m ? methodColors[m] : "#27272a"}`,
-                color: methodColors[m], borderRadius: 8, padding: "8px 16px",
-                fontWeight: 800, fontFamily: "monospace", fontSize: 14, cursor: "pointer",
-              }}>{m}</button>
+          <label className="mb-2 block text-xs font-bold tracking-widest text-zinc-500">MÉTODO</label>
+          <div className="flex flex-wrap gap-2">
+            {methods.map((m) => (
+              <button
+                key={m}
+                onClick={() => setMethod(m)}
+                className={cn(
+                  'rounded-xl border-2 px-4 py-2 font-mono text-sm font-extrabold transition-colors',
+                  method === m ? cn(methodTone(m).bg, methodTone(m).border, methodTone(m).text) : 'border-zinc-800 text-zinc-400 hover:bg-zinc-900',
+                )}
+              >
+                {m}
+              </button>
             ))}
           </div>
         </div>
 
         <div>
-          <label style={{ color: "#71717a", fontSize: 12, fontWeight: 700, display: "block", marginBottom: 6, letterSpacing: 1 }}>ENDPOINT</label>
-          <div style={{ display: "flex", alignItems: "center", background: "#09090b", borderRadius: 10, border: "1px solid #27272a" }}>
-            <span style={{ color: "#3f3f46", padding: "0 12px", fontSize: 13, fontFamily: "monospace", whiteSpace: "nowrap" }}>api.ejemplo.com/</span>
+          <label className="mb-2 block text-xs font-bold tracking-widest text-zinc-500">ENDPOINT</label>
+          <div className="flex items-center rounded-xl border border-zinc-800 bg-zinc-950">
+            <span className="whitespace-nowrap px-3 font-mono text-xs text-zinc-600">api.ejemplo.com/</span>
             <input
               value={endpoint} onChange={(e) => setEndpoint(e.target.value)}
               placeholder="usuarios, productos, usuarios/1..."
-              style={{ flex: 1, background: "transparent", border: "none", color: "#e4e4e7", padding: "10px 12px", fontFamily: "monospace", fontSize: 14, outline: "none" }}
+              className="flex-1 bg-transparent px-3 py-2 font-mono text-sm text-zinc-100 outline-none"
             />
           </div>
-          <div style={{ color: "#3f3f46", fontSize: 11, marginTop: 4 }}>
-            Recursos disponibles: <span style={{ color: "#a78bfa", fontFamily: "monospace" }}>usuarios</span>, <span style={{ color: "#a78bfa", fontFamily: "monospace" }}>productos</span> — Agregá <span style={{ color: "#f59e0b", fontFamily: "monospace" }}>/id</span> para un item específico
+          <div className="mt-1 text-xs text-zinc-600">
+            Recursos disponibles: <span className="font-mono text-violet-300">usuarios</span>, <span className="font-mono text-violet-300">productos</span> — Agregá <span className="font-mono text-amber-300">/id</span> para un item específico
           </div>
         </div>
 
         <div>
-          <label style={{ color: "#71717a", fontSize: 12, fontWeight: 700, display: "block", marginBottom: 6, letterSpacing: 1 }}>AUTENTICACIÓN</label>
+          <label className="mb-2 block text-xs font-bold tracking-widest text-zinc-500">AUTENTICACIÓN</label>
           <input
             value={authKey} onChange={(e) => setAuthKey(e.target.value)}
             placeholder="Bearer token o dejá vacío para ver error 401"
-            style={{ width: "100%", background: "#09090b", border: "1px solid #27272a", borderRadius: 10, color: "#e4e4e7", padding: "10px 12px", fontFamily: "monospace", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-sm text-zinc-100 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70"
           />
-          <div style={{ color: "#3f3f46", fontSize: 11, marginTop: 4 }}>Borrá este campo para ver un error 401 Unauthorized</div>
+          <div className="mt-1 text-xs text-zinc-600">Borrá este campo para ver un error 401 Unauthorized</div>
         </div>
 
         {["POST", "PUT", "PATCH"].includes(method) && (
           <div>
-            <label style={{ color: "#71717a", fontSize: 12, fontWeight: 700, display: "block", marginBottom: 6, letterSpacing: 1 }}>BODY (JSON)</label>
+            <label className="mb-2 block text-xs font-bold tracking-widest text-zinc-500">BODY (JSON)</label>
             <textarea
               value={body} onChange={(e) => setBody(e.target.value)}
-              style={{ width: "100%", minHeight: 100, background: "#09090b", color: "#e4e4e7", border: "1px solid #27272a", borderRadius: 10, padding: 12, fontFamily: "monospace", fontSize: 13, resize: "vertical", boxSizing: "border-box", outline: "none" }}
+              className="min-h-28 w-full resize-y rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-3 font-mono text-sm text-zinc-100 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70"
               spellCheck={false}
             />
           </div>
         )}
 
-        <button onClick={sendRequest} disabled={loading} style={{
-          background: loading ? "#27272a" : methodColors[method],
-          color: "#fff", border: "none", borderRadius: 10, padding: "12px 24px",
-          fontWeight: 700, fontSize: 14, cursor: loading ? "default" : "pointer",
-        }}>
+        <button
+          onClick={sendRequest}
+          disabled={loading}
+          className={cn(
+            'inline-flex h-11 items-center justify-center rounded-xl px-6 text-sm font-bold text-white transition-colors',
+            loading ? 'cursor-not-allowed bg-zinc-800 text-zinc-500' : 'hover:opacity-95',
+            method === 'GET' && 'bg-emerald-500',
+            method === 'POST' && 'bg-sky-500',
+            method === 'PUT' && 'bg-amber-500',
+            method === 'PATCH' && 'bg-violet-500',
+            method === 'DELETE' && 'bg-red-500',
+          )}
+        >
           {loading ? "⏳ Enviando..." : `▶ Enviar ${method} Request`}
         </button>
       </div>
 
       {result && (
-        <div style={{ background: "#09090b", borderRadius: 12, overflow: "hidden", marginBottom: 20, border: `1px solid ${getStatusColor(result.status)}33` }}>
-          <div style={{ background: getStatusColor(result.status) + "12", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ color: getStatusColor(result.status), fontWeight: 800, fontFamily: "monospace", fontSize: 18 }}>{result.status}</span>
-              <span style={{ color: "#e4e4e7", fontWeight: 600 }}>{result.statusText}</span>
+        <div className={cn('mb-5 overflow-hidden rounded-xl border', statusTone(result.status).border)}>
+          <div className={cn('flex items-center justify-between px-4 py-3', statusTone(result.status).bg)}>
+            <div className="flex items-center gap-3">
+              <span className={cn('font-mono text-lg font-black', statusTone(result.status).text)}>{result.status}</span>
+              <span className="font-semibold text-zinc-100">{result.statusText}</span>
             </div>
-            <span style={{ color: "#52525b", fontSize: 12, fontFamily: "monospace" }}>{Math.round(result.time)}ms</span>
+            <span className="font-mono text-xs text-zinc-500">{Math.round(result.time)}ms</span>
           </div>
-          <pre style={{ color: "#a1a1aa", fontSize: 13, margin: 0, padding: 16, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+          <pre className="m-0 whitespace-pre-wrap px-4 py-4 font-mono text-sm leading-relaxed text-zinc-400">
             {JSON.stringify(result.body, null, 2)}
           </pre>
         </div>
@@ -688,16 +598,13 @@ function PlaygroundLesson() {
 
       {history.length > 0 && (
         <div>
-          <div style={{ color: "#3f3f46", fontSize: 12, fontWeight: 700, marginBottom: 8, letterSpacing: 1 }}>HISTORIAL</div>
-          <div style={{ display: "grid", gap: 4 }}>
+          <div className="mb-2 text-xs font-bold tracking-widest text-zinc-600">HISTORIAL</div>
+          <div className="grid gap-2">
             {history.map((h, i) => (
-              <div key={i} style={{
-                display: "flex", gap: 10, alignItems: "center", fontSize: 12, fontFamily: "monospace",
-                color: "#52525b", padding: "6px 10px", background: "#18181b", borderRadius: 8, border: "1px solid #27272a",
-              }}>
-                <span style={{ color: methodColors[h.method], fontWeight: 700, minWidth: 50 }}>{h.method}</span>
-                <span style={{ color: "#71717a", flex: 1 }}>{h.endpoint}</span>
-                <span style={{ color: getStatusColor(h.status), fontWeight: 700 }}>{h.status}</span>
+              <div key={i} className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 font-mono text-xs text-zinc-500">
+                <span className={cn('min-w-12 font-bold', methodTone(h.method).text)}>{h.method}</span>
+                <span className="flex-1 text-zinc-400">{h.endpoint}</span>
+                <span className={cn('font-bold', statusTone(h.status).text)}>{h.status}</span>
                 <span>{h.time}ms</span>
               </div>
             ))}
@@ -706,15 +613,6 @@ function PlaygroundLesson() {
       )}
     </div>
   );
-}
-
-function shuffle(arr) {
-  const newArr = [...arr];
-  for (let i = newArr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
-  }
-  return newArr;
 }
 
 // ─── QUIZ LESSON ───
@@ -733,134 +631,6 @@ const ALL_QUESTIONS = [
   { q: "¿Para qué sirve el endpoint en una API?", opts: ["Es el formato de datos de la respuesta", "Es la URL específica donde vive el recurso", "Es el método de autenticación del usuario", "Es el código de estado del servidor"], correct: "Es la URL específica donde vive el recurso", explain: "El endpoint es la ruta (URL) que representa al recurso, por ejemplo: /api/usuarios/1" }
 ];
 
-function QuizLesson() {
-  const [questions, setQuestions] = useState([]);
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [finished, setFinished] = useState(false);
-  const [showExplain, setShowExplain] = useState(false);
-  const [shuffledOpts, setShuffledOpts] = useState([]);
-
-  useEffect(() => {
-    const q = shuffle(ALL_QUESTIONS).slice(0, 8);
-    setQuestions(q);
-    if (q[0]) setShuffledOpts(shuffle(q[0].opts));
-  }, []);
-
-  useEffect(() => {
-    if (questions[current]) setShuffledOpts(shuffle(questions[current].opts));
-  }, [current, questions]);
-
-  function selectAnswer(opt) {
-    if (selected !== null) return;
-    setSelected(opt);
-    setShowExplain(true);
-    if (opt === questions[current].correct) setScore(score + 1);
-  }
-
-  function nextQuestion() {
-    if (current + 1 >= questions.length) {
-      setFinished(true);
-    } else {
-      setCurrent(current + 1);
-      setSelected(null);
-      setShowExplain(false);
-    }
-  }
-
-  function restart() {
-    const q = shuffle(ALL_QUESTIONS).slice(0, 8);
-    setQuestions(q);
-    if (q[0]) setShuffledOpts(shuffle(q[0].opts));
-    setCurrent(0);
-    setSelected(null);
-    setScore(0);
-    setFinished(false);
-    setShowExplain(false);
-  }
-
-  if (questions.length === 0) return null;
-
-  if (finished) {
-    const pct = Math.round((score / questions.length) * 100);
-    const emoji = pct >= 80 ? "🏆" : pct >= 60 ? "👍" : "📚";
-    const msg = pct >= 80 ? "¡Excelente! Dominás los fundamentos." : pct >= 60 ? "¡Bien! Repasá los conceptos que fallaste." : "Necesitás repasar. Volvé a las lecciones.";
-    return (
-      <div style={{ textAlign: "center", padding: "40px 20px" }}>
-        <div style={{ fontSize: 64, marginBottom: 16 }}>{emoji}</div>
-        <div style={{ color: "#e4e4e7", fontSize: 24, fontWeight: 800, marginBottom: 8 }}>{score}/{questions.length}</div>
-        <div style={{ color: pct >= 80 ? "#10b981" : pct >= 60 ? "#f59e0b" : "#ef4444", fontSize: 48, fontWeight: 900, marginBottom: 12 }}>{pct}%</div>
-        <div style={{ color: "#a1a1aa", fontSize: 15, marginBottom: 24 }}>{msg}</div>
-        <button onClick={restart} style={{
-          background: "#6366f1", color: "#fff", border: "none", borderRadius: 10,
-          padding: "12px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer",
-        }}>
-          🔄 Intentar de nuevo
-        </button>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <span style={{ color: "#52525b", fontSize: 13 }}>Pregunta {current + 1} de {questions.length}</span>
-        <span style={{ color: "#10b981", fontWeight: 700, fontSize: 14 }}>Score: {score}</span>
-      </div>
-
-      <div style={{ width: "100%", height: 3, background: "#27272a", borderRadius: 2, marginBottom: 24 }}>
-        <div style={{ width: `${((current + 1) / questions.length) * 100}%`, height: 3, background: "linear-gradient(90deg, #6366f1, #a78bfa)", borderRadius: 2, transition: "width 0.3s" }} />
-      </div>
-
-      <div style={{ color: "#e4e4e7", fontSize: 17, fontWeight: 700, marginBottom: 24, lineHeight: 1.6 }}>{q.q}</div>
-
-      <div style={{ display: "grid", gap: 10, marginBottom: 20 }}>
-        {shuffledOpts.map((opt, idx) => {
-          let bg = "#18181b", border = "#27272a", textColor = "#e4e4e7";
-          if (selected !== null) {
-            if (opt === q.correct) { bg = "#10b98118"; border = "#10b981"; textColor = "#10b981"; }
-            else if (opt === selected && opt !== q.correct) { bg = "#ef444418"; border = "#ef4444"; textColor = "#ef4444"; }
-          }
-          return (
-            <button key={idx} onClick={() => selectAnswer(opt)} style={{
-              background: bg, border: `2px solid ${border}`, borderRadius: 10, padding: "14px 16px",
-              color: textColor, fontSize: 14, cursor: selected !== null ? "default" : "pointer",
-              textAlign: "left", fontFamily: opt.includes('{') ? "monospace" : "inherit", transition: "all 0.2s",
-            }}>
-              <span style={{ color: "#52525b", marginRight: 10, fontWeight: 700 }}>{String.fromCharCode(65 + idx)}.</span>
-              {opt}
-            </button>
-          );
-        })}
-      </div>
-
-      {showExplain && (
-        <div style={{
-          background: "#18181b", borderRadius: 10, padding: 16, marginBottom: 16,
-          borderLeft: `4px solid ${selected === q.correct ? "#10b981" : "#f59e0b"}`,
-        }}>
-          <div style={{ color: selected === q.correct ? "#10b981" : "#f59e0b", fontWeight: 700, marginBottom: 6 }}>
-            {selected === q.correct ? "✅ ¡Correcto!" : "❌ Incorrecto"}
-          </div>
-          <div style={{ color: "#a1a1aa", fontSize: 13, lineHeight: 1.6 }}>{q.explain}</div>
-        </div>
-      )}
-
-      {selected !== null && (
-        <button onClick={nextQuestion} style={{
-          background: "#6366f1", color: "#fff", border: "none", borderRadius: 10,
-          padding: "12px 24px", fontWeight: 700, fontSize: 14, cursor: "pointer", width: "100%",
-        }}>
-          {current + 1 >= questions.length ? "Ver Resultado Final →" : "Siguiente →"}
-        </button>
-      )}
-    </div>
-  );
-}
-
 // ─── MAIN APP ───
 export default function APILearningLab() {
   const [activeLesson, setActiveLesson] = useState("anatomy");
@@ -873,119 +643,50 @@ export default function APILearningLab() {
 
   function renderLesson() {
     switch (activeLesson) {
-      case "anatomy": return <AnatomyLesson />;
-      case "methods": return <MethodsLesson />;
-      case "status": return <StatusLesson />;
-      case "headers": return <HeadersLesson />;
-      case "json": return <JSONLesson />;
-      case "playground": return <PlaygroundLesson />;
-      case "quiz": return <QuizLesson />;
-      default: return null;
+      case "anatomy":
+        return <AnatomyLesson />
+      case "methods":
+        return <MethodsLesson />
+      case "status":
+        return <StatusLesson />
+      case "headers":
+        return <HeadersLesson />
+      case "json":
+        return <JSONLesson />
+      case "playground":
+        return <PlaygroundLesson />
+      case "quiz":
+        return (
+          <Quiz
+            questionsBank={ALL_QUESTIONS}
+            questionCount={8}
+            messages={{
+              high: "¡Excelente! Dominás los fundamentos.",
+              medium: "¡Bien! Repasá los conceptos que fallaste.",
+              low: "Necesitás repasar. Volvé a las lecciones.",
+            }}
+          />
+        )
+      default:
+        return null
     }
   }
 
-  const currentIdx = LESSONS.findIndex((l) => l.id === activeLesson);
-
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#09090b",
-      color: "#e4e4e7",
-      fontFamily: "'Outfit', 'Satoshi', -apple-system, sans-serif",
-    }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-      `}</style>
-
-      <div style={{
-        background: "linear-gradient(160deg, #09090b 0%, #18181b 50%, #1a1025 100%)",
-        borderBottom: "1px solid #27272a",
-        padding: "20px 20px",
-      }}>
-        <div style={{ maxWidth: 920, margin: "0 auto" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-            <span style={{ fontSize: 26 }}>⚡</span>
-            <h1 style={{
-              margin: 0, fontSize: 22, fontWeight: 900, letterSpacing: -0.5,
-              background: "linear-gradient(135deg, #60a5fa, #a78bfa, #6366f1)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-            }}>
-              API Learning Lab
-            </h1>
-            <span style={{
-              background: "#6366f122", color: "#6366f1", fontSize: 10, fontWeight: 800,
-              padding: "3px 8px", borderRadius: 6, letterSpacing: 1,
-            }}>NIVEL 1</span>
-          </div>
-          <p style={{ margin: 0, color: "#52525b", fontSize: 13 }}>Aprendé APIs desde cero con ejemplos interactivos</p>
-          <div style={{ marginTop: 10, display: "flex", gap: 4, alignItems: "center" }}>
-            <div style={{ flex: 1, height: 3, background: "#27272a", borderRadius: 2 }}>
-              <div style={{
-                width: `${(visited.length / LESSONS.length) * 100}%`, height: 3,
-                background: "linear-gradient(90deg, #6366f1, #a78bfa)", borderRadius: 2, transition: "width 0.5s",
-              }} />
-            </div>
-            <span style={{ color: "#52525b", fontSize: 11, marginLeft: 8 }}>{visited.length}/{LESSONS.length}</span>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 920, margin: "0 auto", padding: "14px 14px 40px" }}>
-        <div style={{ display: "flex", gap: 5, overflowX: "auto", paddingBottom: 6, marginBottom: 20, scrollbarWidth: "thin" }}>
-          {LESSONS.map((l) => (
-            <button key={l.id} onClick={() => navigate(l.id)} style={{
-              background: activeLesson === l.id ? "#18181b" : "transparent",
-              border: `1px solid ${activeLesson === l.id ? "#6366f1" : "transparent"}`,
-              borderRadius: 8, padding: "8px 12px", cursor: "pointer",
-              display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
-            }}>
-              <span style={{ fontSize: 14 }}>{visited.includes(l.id) && l.id !== activeLesson ? "✅" : l.icon}</span>
-              <span style={{ color: activeLesson === l.id ? "#e4e4e7" : "#52525b", fontSize: 12, fontWeight: activeLesson === l.id ? 700 : 500 }}>
-                {l.title}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: "#111113", borderRadius: 14, border: "1px solid #27272a", overflow: "hidden" }}>
-          <div style={{ padding: "18px 22px", borderBottom: "1px solid #27272a", display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 26 }}>{LESSONS[currentIdx].icon}</span>
-            <div>
-              <h2 style={{ margin: 0, fontSize: 19, fontWeight: 800 }}>{LESSONS[currentIdx].title}</h2>
-              <p style={{ margin: "2px 0 0", color: "#52525b", fontSize: 12 }}>{LESSONS[currentIdx].desc}</p>
-            </div>
-          </div>
-          <div style={{ padding: 22 }} key={activeLesson}>
-            {renderLesson()}
-          </div>
-        </div>
-
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 14 }}>
-          <button
-            onClick={() => navigate(LESSONS[Math.max(0, currentIdx - 1)].id)}
-            disabled={currentIdx === 0}
-            style={{
-              background: "#18181b", color: currentIdx === 0 ? "#27272a" : "#a1a1aa",
-              border: "1px solid #27272a", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 600,
-              cursor: currentIdx === 0 ? "default" : "pointer",
-            }}
-          >← Anterior</button>
-          <button
-            onClick={() => navigate(LESSONS[Math.min(LESSONS.length - 1, currentIdx + 1)].id)}
-            disabled={currentIdx === LESSONS.length - 1}
-            style={{
-              background: currentIdx === LESSONS.length - 1 ? "#18181b" : "linear-gradient(135deg, #6366f1, #8b5cf6)",
-              color: currentIdx === LESSONS.length - 1 ? "#27272a" : "#fff",
-              border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 700,
-              cursor: currentIdx === LESSONS.length - 1 ? "default" : "pointer",
-            }}
-          >Siguiente →</button>
-        </div>
-      </div>
-    </div>
+    <LabLayout
+      icon="⚡"
+      title="API Learning Lab"
+      titleClassName="text-xl font-black tracking-tight bg-gradient-to-r from-sky-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent"
+      subtitle="Aprendé APIs desde cero con ejemplos interactivos"
+      levelLabel="NIVEL 1"
+      levelColor="indigo"
+      progressBarClassName="bg-gradient-to-r from-indigo-500 to-violet-500"
+      lessons={LESSONS}
+      activeLesson={activeLesson}
+      visited={visited}
+      onNavigate={navigate}
+    >
+      {renderLesson()}
+    </LabLayout>
   );
 }
