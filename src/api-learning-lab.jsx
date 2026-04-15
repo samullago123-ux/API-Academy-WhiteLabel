@@ -21,6 +21,89 @@ const LESSONS = [
 ];
 
 // ─── SIMULATED API SERVER ───
+const fakeDB = {
+  usuarios: [
+    { id: 1, nombre: "Daniel", email: "daniel@whitelabel.lat", rol: "admin" },
+    { id: 2, nombre: "Andrés", email: "andres@whitelabel.lat", rol: "dev" },
+    { id: 3, nombre: "María", email: "maria@ejemplo.com", rol: "user" },
+  ],
+  productos: [
+    { id: 1, nombre: "Plan Starter", precio: 99, moneda: "USD" },
+    { id: 2, nombre: "Plan Pro", precio: 299, moneda: "USD" },
+    { id: 3, nombre: "Plan Enterprise", precio: 799, moneda: "USD" },
+  ],
+};
+
+function simulateAPI(method, endpoint, body = null, headers = {}) {
+  const delay = 300 + Math.random() * 700;
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const parts = endpoint.split("/").filter(Boolean);
+      const resource = parts[0];
+      const id = parts[1] ? parseInt(parts[1]) : null;
+
+      if (!headers["Authorization"] && !headers["X-API-Key"]) {
+        resolve({ status: 401, statusText: "Unauthorized", body: { error: "No se proporcionó autenticación", message: "Incluí un header Authorization o X-API-Key" }, time: delay });
+        return;
+      }
+      if (!fakeDB[resource]) {
+        resolve({ status: 404, statusText: "Not Found", body: { error: "Recurso no encontrado", available: Object.keys(fakeDB) }, time: delay });
+        return;
+      }
+
+      switch (method) {
+        case "GET":
+          if (id) {
+            const item = fakeDB[resource].find((i) => i.id === id);
+            if (!item) resolve({ status: 404, statusText: "Not Found", body: { error: `${resource} con id ${id} no existe` }, time: delay });
+            else resolve({ status: 200, statusText: "OK", body: item, time: delay });
+          } else {
+            resolve({ status: 200, statusText: "OK", body: fakeDB[resource], time: delay });
+          }
+          break;
+        case "POST":
+          if (!body || !body.nombre) {
+            resolve({ status: 400, statusText: "Bad Request", body: { error: "El campo 'nombre' es requerido" }, time: delay });
+          } else {
+            const newItem = { id: fakeDB[resource].length + 1, ...body };
+            fakeDB[resource].push(newItem);
+            resolve({ status: 201, statusText: "Created", body: newItem, time: delay });
+          }
+          break;
+        case "PUT":
+          if (!id) {
+            resolve({ status: 400, statusText: "Bad Request", body: { error: "Se requiere un ID para actualizar" }, time: delay });
+          } else {
+            const idx = fakeDB[resource].findIndex((i) => i.id === id);
+            if (idx === -1) resolve({ status: 404, statusText: "Not Found", body: { error: `No existe ${resource} con id ${id}` }, time: delay });
+            else { fakeDB[resource][idx] = { id, ...body }; resolve({ status: 200, statusText: "OK", body: fakeDB[resource][idx], time: delay }); }
+          }
+          break;
+        case "PATCH":
+          if (!id) {
+            resolve({ status: 400, statusText: "Bad Request", body: { error: "Se requiere un ID para modificar" }, time: delay });
+          } else {
+            const idx = fakeDB[resource].findIndex((i) => i.id === id);
+            if (idx === -1) resolve({ status: 404, statusText: "Not Found", body: { error: `No existe ${resource} con id ${id}` }, time: delay });
+            else { fakeDB[resource][idx] = { ...fakeDB[resource][idx], ...body }; resolve({ status: 200, statusText: "OK", body: fakeDB[resource][idx], time: delay }); }
+          }
+          break;
+        case "DELETE":
+          if (!id) {
+            resolve({ status: 400, statusText: "Bad Request", body: { error: "Se requiere un ID para eliminar" }, time: delay });
+          } else {
+            const dIdx = fakeDB[resource].findIndex((i) => i.id === id);
+            if (dIdx === -1) resolve({ status: 404, statusText: "Not Found", body: { error: "No existe" }, time: delay });
+            else { const deleted = fakeDB[resource].splice(dIdx, 1)[0]; resolve({ status: 200, statusText: "OK", body: { message: "Eliminado exitosamente", deleted }, time: delay }); }
+          }
+          break;
+        default:
+          resolve({ status: 405, statusText: "Method Not Allowed", body: { error: "Método no soportado" }, time: delay });
+      }
+    }, delay);
+  });
+}
+
 // ─── ANATOMY LESSON ───
 function AnatomyLesson() {
   const [hoveredPart, setHoveredPart] = useState(null);
@@ -625,6 +708,15 @@ function PlaygroundLesson() {
   );
 }
 
+function shuffle(arr) {
+  const newArr = [...arr];
+  for (let i = newArr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+  }
+  return newArr;
+}
+
 // ─── QUIZ LESSON ───
 const ALL_QUESTIONS = [
   { q: "¿Qué método HTTP usás para CREAR un recurso nuevo?", opts: ["GET: Obtiene los recursos actuales", "POST: Envía datos para crear el recurso", "PUT: Modifica un recurso parcialmente", "DELETE: Oculta el recurso del sistema"], correct: "POST: Envía datos para crear el recurso", explain: "POST crea recursos nuevos. Cada POST puede crear un recurso diferente (no es idempotente)." },
@@ -640,6 +732,134 @@ const ALL_QUESTIONS = [
   { q: "¿Qué código indica que el servidor falló internamente?", opts: ["400 Bad Request", "404 Not Found", "500 Internal Server Error", "502 Bad Gateway"], correct: "500 Internal Server Error", explain: "500 indica que ocurrió un error inesperado en el servidor y no pudo procesar la solicitud (ej. error de código, caída de DB)." },
   { q: "¿Para qué sirve el endpoint en una API?", opts: ["Es el formato de datos de la respuesta", "Es la URL específica donde vive el recurso", "Es el método de autenticación del usuario", "Es el código de estado del servidor"], correct: "Es la URL específica donde vive el recurso", explain: "El endpoint es la ruta (URL) que representa al recurso, por ejemplo: /api/usuarios/1" }
 ];
+
+function QuizLesson() {
+  const [questions, setQuestions] = useState([]);
+  const [current, setCurrent] = useState(0);
+  const [selected, setSelected] = useState(null);
+  const [score, setScore] = useState(0);
+  const [finished, setFinished] = useState(false);
+  const [showExplain, setShowExplain] = useState(false);
+  const [shuffledOpts, setShuffledOpts] = useState([]);
+
+  useEffect(() => {
+    const q = shuffle(ALL_QUESTIONS).slice(0, 8);
+    setQuestions(q);
+    if (q[0]) setShuffledOpts(shuffle(q[0].opts));
+  }, []);
+
+  useEffect(() => {
+    if (questions[current]) setShuffledOpts(shuffle(questions[current].opts));
+  }, [current, questions]);
+
+  function selectAnswer(opt) {
+    if (selected !== null) return;
+    setSelected(opt);
+    setShowExplain(true);
+    if (opt === questions[current].correct) setScore(score + 1);
+  }
+
+  function nextQuestion() {
+    if (current + 1 >= questions.length) {
+      setFinished(true);
+    } else {
+      setCurrent(current + 1);
+      setSelected(null);
+      setShowExplain(false);
+    }
+  }
+
+  function restart() {
+    const q = shuffle(ALL_QUESTIONS).slice(0, 8);
+    setQuestions(q);
+    if (q[0]) setShuffledOpts(shuffle(q[0].opts));
+    setCurrent(0);
+    setSelected(null);
+    setScore(0);
+    setFinished(false);
+    setShowExplain(false);
+  }
+
+  if (questions.length === 0) return null;
+
+  if (finished) {
+    const pct = Math.round((score / questions.length) * 100);
+    const emoji = pct >= 80 ? "🏆" : pct >= 60 ? "👍" : "📚";
+    const msg = pct >= 80 ? "¡Excelente! Dominás los fundamentos." : pct >= 60 ? "¡Bien! Repasá los conceptos que fallaste." : "Necesitás repasar. Volvé a las lecciones.";
+    return (
+      <div style={{ textAlign: "center", padding: "40px 20px" }}>
+        <div style={{ fontSize: 64, marginBottom: 16 }}>{emoji}</div>
+        <div style={{ color: "#e4e4e7", fontSize: 24, fontWeight: 800, marginBottom: 8 }}>{score}/{questions.length}</div>
+        <div style={{ color: pct >= 80 ? "#10b981" : pct >= 60 ? "#f59e0b" : "#ef4444", fontSize: 48, fontWeight: 900, marginBottom: 12 }}>{pct}%</div>
+        <div style={{ color: "#a1a1aa", fontSize: 15, marginBottom: 24 }}>{msg}</div>
+        <button onClick={restart} style={{
+          background: "#6366f1", color: "#fff", border: "none", borderRadius: 10,
+          padding: "12px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer",
+        }}>
+          🔄 Intentar de nuevo
+        </button>
+      </div>
+    );
+  }
+
+  const q = questions[current];
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <span style={{ color: "#52525b", fontSize: 13 }}>Pregunta {current + 1} de {questions.length}</span>
+        <span style={{ color: "#10b981", fontWeight: 700, fontSize: 14 }}>Score: {score}</span>
+      </div>
+
+      <div style={{ width: "100%", height: 3, background: "#27272a", borderRadius: 2, marginBottom: 24 }}>
+        <div style={{ width: `${((current + 1) / questions.length) * 100}%`, height: 3, background: "linear-gradient(90deg, #6366f1, #a78bfa)", borderRadius: 2, transition: "width 0.3s" }} />
+      </div>
+
+      <div style={{ color: "#e4e4e7", fontSize: 17, fontWeight: 700, marginBottom: 24, lineHeight: 1.6 }}>{q.q}</div>
+
+      <div style={{ display: "grid", gap: 10, marginBottom: 20 }}>
+        {shuffledOpts.map((opt, idx) => {
+          let bg = "#18181b", border = "#27272a", textColor = "#e4e4e7";
+          if (selected !== null) {
+            if (opt === q.correct) { bg = "#10b98118"; border = "#10b981"; textColor = "#10b981"; }
+            else if (opt === selected && opt !== q.correct) { bg = "#ef444418"; border = "#ef4444"; textColor = "#ef4444"; }
+          }
+          return (
+            <button key={idx} onClick={() => selectAnswer(opt)} style={{
+              background: bg, border: `2px solid ${border}`, borderRadius: 10, padding: "14px 16px",
+              color: textColor, fontSize: 14, cursor: selected !== null ? "default" : "pointer",
+              textAlign: "left", fontFamily: opt.includes('{') ? "monospace" : "inherit", transition: "all 0.2s",
+            }}>
+              <span style={{ color: "#52525b", marginRight: 10, fontWeight: 700 }}>{String.fromCharCode(65 + idx)}.</span>
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+
+      {showExplain && (
+        <div style={{
+          background: "#18181b", borderRadius: 10, padding: 16, marginBottom: 16,
+          borderLeft: `4px solid ${selected === q.correct ? "#10b981" : "#f59e0b"}`,
+        }}>
+          <div style={{ color: selected === q.correct ? "#10b981" : "#f59e0b", fontWeight: 700, marginBottom: 6 }}>
+            {selected === q.correct ? "✅ ¡Correcto!" : "❌ Incorrecto"}
+          </div>
+          <div style={{ color: "#a1a1aa", fontSize: 13, lineHeight: 1.6 }}>{q.explain}</div>
+        </div>
+      )}
+
+      {selected !== null && (
+        <button onClick={nextQuestion} style={{
+          background: "#6366f1", color: "#fff", border: "none", borderRadius: 10,
+          padding: "12px 24px", fontWeight: 700, fontSize: 14, cursor: "pointer", width: "100%",
+        }}>
+          {current + 1 >= questions.length ? "Ver Resultado Final →" : "Siguiente →"}
+        </button>
+      )}
+    </div>
+  );
+}
 
 // ─── MAIN APP ───
 export default function APILearningLab() {
@@ -659,15 +879,7 @@ export default function APILearningLab() {
       case "headers": return <HeadersLesson />;
       case "json": return <JSONLesson />;
       case "playground": return <PlaygroundLesson />;
-      case "quiz": return <Quiz 
-        questionsBank={ALL_QUESTIONS} 
-        questionCount={8} 
-        messages={{
-          high: "¡Excelente! Dominás los fundamentos.",
-          medium: "¡Bien! Repasá los conceptos que fallaste.",
-          low: "Necesitás repasar. Volvé a las lecciones."
-        }}
-      />;
+      case "quiz": return <QuizLesson />;
       default: return null;
     }
   }
