@@ -20,3 +20,7 @@ Thumbs.db
 # Env
 .env
 .env.*
+
+# Supabase CLI
+supabase/.temp/
+.supabase/

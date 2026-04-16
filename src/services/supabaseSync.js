@@ -60,7 +60,17 @@ export async function pushAllToSupabase() {
 
   if (certificate) {
     const certRes = await supabase.from(TABLES.certificate).upsert(
-      { user_id: userId, certificate_id: certificate.id, data: certificate },
+      {
+        user_id: userId,
+        certificate_id: certificate.id,
+        public: certificate.public === true,
+        issued_at: certificate.issuedAt ?? null,
+        display_name: certificate.displayName ?? null,
+        course_version: certificate.courseVersion ?? null,
+        scores: certificate.scores ?? null,
+        signature: certificate.signature ?? null,
+        data: certificate,
+      },
       { onConflict: 'user_id' },
     )
     if (certRes.error) throw certRes.error
@@ -121,4 +131,11 @@ export async function pullAllFromSupabase() {
   const certRes = await supabase.from(TABLES.certificate).select('data').eq('user_id', userId).maybeSingle()
   if (certRes.error) throw certRes.error
   if (certRes.data?.data && typeof certRes.data.data === 'object') saveCertificate(certRes.data.data)
+}
+
+export async function verifyCertificatePublic(certificateId) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc('verify_certificate', { p_certificate_id: certificateId })
+  if (error) throw error
+  return data
 }

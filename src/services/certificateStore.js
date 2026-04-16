@@ -38,7 +38,7 @@ export function saveCertificate(record) {
   window.localStorage.setItem(KEY, JSON.stringify(record))
 }
 
-export async function issueCertificate({ displayName, progress, levels, courseVersion = '1.0.0' }) {
+export async function issueCertificate({ displayName, progress, levels, courseVersion = '1.0.0', public: isPublic = true }) {
   const issuedAt = Date.now()
   const id = uuid()
   const scores = {}
@@ -54,6 +54,7 @@ export async function issueCertificate({ displayName, progress, levels, courseVe
     issuedAt,
     courseVersion,
     displayName: String(displayName ?? '').trim(),
+    public: Boolean(isPublic),
     scores,
   }
 
@@ -70,4 +71,3 @@ export function isCertificateEligible({ progress, levels, minPct = 60 }) {
     return visited >= level.lessonCount && best >= minPct
   })
 }
-

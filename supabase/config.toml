@@ -1,0 +1,14 @@
+project_id = "mhtpefallvlsxgxvsvbs"
+
+[auth]
+site_url = "https://api-academy-white-label-s23s.vercel.app"
+additional_redirect_urls = [
+  "https://api-academy-white-label-s23s.vercel.app/*",
+  "http://localhost:5173/*",
+]
+
+[functions.hello-world]
+verify_jwt = false
+
+[functions.verify-certificate]
+verify_jwt = false

@@ -3,6 +3,9 @@ import { Badge, Button, Card, Container } from '../components/ui.jsx'
 import { trackEvent } from '../services/analytics.js'
 import { issueCertificate, isCertificateEligible, loadCertificate } from '../services/certificateStore.js'
 import { loadProfile, saveProfile } from '../services/profileStore.js'
+import { supabase } from '../services/supabaseClient.js'
+import { verifyCertificatePublic } from '../services/supabaseSync.js'
+import { verifyCertificateEdge } from '../services/edgeFunctions.js'
 
 function formatDate(ts) {
   if (!ts) return 'n/a'
@@ -17,17 +20,56 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
   const [displayName, setDisplayName] = useState(() => loadProfile().displayName)
   const [certificate, setCertificate] = useState(() => loadCertificate())
   const [issuing, setIssuing] = useState(false)
+  const [makePublic, setMakePublic] = useState(() => (certificate?.public ?? true) === true)
+  const [remoteVerified, setRemoteVerified] = useState(null)
+  const [remoteData, setRemoteData] = useState(null)
+  const [remoteError, setRemoteError] = useState('')
 
   useEffect(() => {
     trackEvent(verifyId ? 'certificate_verify_open' : 'certificate_open', { verifyId: verifyId ?? null })
   }, [verifyId])
 
+  useEffect(() => {
+    if (!verifyId) return
+    if (!supabase) return
+    setRemoteVerified(null)
+    setRemoteData(null)
+    setRemoteError('')
+
+    verifyCertificateEdge(verifyId)
+      .then((res) => {
+        const ok = res?.ok === true
+        if (ok && res?.data) {
+          setRemoteVerified(true)
+          setRemoteData(res.data)
+        } else {
+          setRemoteVerified(false)
+        }
+      })
+      .catch(() => {
+        verifyCertificatePublic(verifyId)
+          .then((data) => {
+            if (data) {
+              setRemoteVerified(true)
+              setRemoteData(data)
+            } else {
+              setRemoteVerified(false)
+            }
+          })
+          .catch((e) => {
+            setRemoteError(e?.message ?? 'No se pudo verificar con Supabase.')
+          })
+      })
+  }, [verifyId])
+
   const eligible = useMemo(() => isCertificateEligible({ progress, levels, minPct: 60 }), [progress, levels])
   const verified = useMemo(() => {
     if (!verifyId) return null
+    if (remoteVerified === true) return true
+    if (remoteVerified === false) return false
     if (!certificate) return false
     return certificate.id === verifyId
-  }, [verifyId, certificate])
+  }, [verifyId, certificate, remoteVerified])
 
   async function issue() {
     const name = displayName.trim()
@@ -35,7 +77,7 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
     setIssuing(true)
     saveProfile({ displayName: name })
     try {
-      const record = await issueCertificate({ displayName: name, progress, levels })
+      const record = await issueCertificate({ displayName: name, progress, levels, public: makePublic })
       setCertificate(record)
       trackEvent('certificate_issued', { id: record.id })
     } finally {
@@ -72,6 +114,13 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
               <div>
                 <div className="text-sm font-extrabold text-zinc-100">Verificación</div>
                 <div className="mt-1 text-sm text-zinc-400">ID: <span className="font-mono text-zinc-200">{verifyId}</span></div>
+                {remoteError && <div className="mt-1 text-xs text-zinc-500">{remoteError}</div>}
+                {remoteData && (
+                  <div className="mt-2 text-xs text-zinc-500">
+                    {remoteData.displayName ? `Nombre: ${remoteData.displayName} · ` : ''}
+                    {remoteData.issuedAt ? `Fecha: ${formatDate(remoteData.issuedAt)}` : ''}
+                  </div>
+                )}
               </div>
               <Badge color={verified ? 'emerald' : 'red'}>{verified ? 'VÁLIDO' : 'NO ENCONTRADO'}</Badge>
             </div>
@@ -110,6 +159,22 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
                     </div>
                   )
                 })}
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+              <div className="text-xs font-bold tracking-widest text-zinc-500">VERIFICACIÓN PÚBLICA</div>
+              <label className="mt-3 flex cursor-pointer items-center gap-3 text-sm text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={makePublic}
+                  onChange={(e) => setMakePublic(e.target.checked)}
+                  className="h-4 w-4 rounded border-zinc-700 bg-zinc-950 text-indigo-500"
+                />
+                Hacer público este certificado (para validar con link)
+              </label>
+              <div className="mt-2 text-xs text-zinc-600">
+                Si está activo, el certificado se puede verificar con su ID.
               </div>
             </div>
 
