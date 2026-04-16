@@ -5,12 +5,16 @@ import { Badge, Card, Container } from './components/ui'
 import { loadAllProgress, saveLabProgress } from './services/progressStore.js'
 import { aggregateMetrics, clearEvents, loadEvents, trackEvent } from './services/analytics.js'
 import { initTheme } from './theme/theme.js'
+import { supabase } from './services/supabaseClient.js'
+import { getSession, pullAllFromSupabase, pullEventsFromSupabase, pushAllToSupabase, signInWithEmailOtp, signOut } from './services/supabaseSync.js'
 
 initTheme()
 
 const APILearningLab = lazy(() => import('./api-learning-lab.jsx'))
 const AdvancedAPILab = lazy(() => import('./advanced-api-lab.jsx'))
 const ExpertAPILab = lazy(() => import('./expert-api-lab.jsx'))
+const CertificateView = lazy(() => import('./views/CertificateView.jsx'))
+const ChallengesView = lazy(() => import('./views/ChallengesView.jsx'))
 
 const LEVELS = [
   {
@@ -87,22 +91,23 @@ function formatDate(ts) {
   }
 }
 
+function parseRoute(hash) {
+  const value = String(hash ?? '').replace('#', '')
+  if (value.startsWith('verify=')) return { view: 'certificate', verifyId: value.slice('verify='.length) }
+  if (value === 'certificate') return { view: 'certificate', verifyId: null }
+  if (value === 'challenges') return { view: 'challenges', verifyId: null }
+  if (value === 'advanced') return { view: 'advanced', verifyId: null }
+  if (value === 'basics') return { view: 'basics', verifyId: null }
+  if (value === 'expert') return { view: 'expert', verifyId: null }
+  return { view: 'home', verifyId: null }
+}
+
 function App() {
-  const [view, setView] = useState(() => {
-    const hash = window.location.hash.replace('#', '')
-    if (hash === 'advanced') return 'advanced'
-    if (hash === 'basics') return 'basics'
-    if (hash === 'expert') return 'expert'
-    return 'home'
-  })
+  const [route, setRoute] = useState(() => parseRoute(window.location.hash))
 
   useEffect(() => {
     function onHash() {
-      const hash = window.location.hash.replace('#', '')
-      if (hash === 'advanced') setView('advanced')
-      else if (hash === 'basics') setView('basics')
-      else if (hash === 'expert') setView('expert')
-      else setView('home')
+      setRoute(parseRoute(window.location.hash))
     }
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
@@ -111,16 +116,47 @@ function App() {
   const progress = loadAllProgress()
   const [searchQuery, setSearchQuery] = useState('')
   const [showMetrics, setShowMetrics] = useState(false)
+  const [sbEmail, setSbEmail] = useState('')
+  const [sbUser, setSbUser] = useState(null)
+  const [sbBusy, setSbBusy] = useState(false)
+  const [sbMsg, setSbMsg] = useState('')
 
   const content = useMemo(() => {
-    if (view === 'basics') return <APILearningLab />
-    if (view === 'advanced') return <AdvancedAPILab />
-    if (view === 'expert') return <ExpertAPILab />
+    if (route.view === 'basics') return <APILearningLab />
+    if (route.view === 'advanced') return <AdvancedAPILab />
+    if (route.view === 'expert') return <ExpertAPILab />
+    if (route.view === 'challenges') return <ChallengesView onBack={() => (window.location.hash = '#')} />
+    if (route.view === 'certificate') {
+      return (
+        <CertificateView
+          progress={progress}
+          levels={LEVELS}
+          verifyId={route.verifyId}
+          onBack={() => (window.location.hash = '#')}
+        />
+      )
+    }
     return null
-  }, [view])
+  }, [route.view, route.verifyId, progress])
 
   useEffect(() => {
     trackEvent('app_open')
+  }, [])
+
+  useEffect(() => {
+    if (!supabase) return
+    let unsub = null
+
+    getSession()
+      .then((s) => setSbUser(s?.user ?? null))
+      .catch(() => {})
+
+    const sub = supabase.auth.onAuthStateChange((_event, session) => {
+      setSbUser(session?.user ?? null)
+    })
+    unsub = () => sub.data.subscription.unsubscribe()
+
+    return () => unsub?.()
   }, [])
 
   useEffect(() => {
@@ -226,6 +262,23 @@ function App() {
             <br />
             3 niveles · 25 lecciones interactivas · 48 preguntas de quiz
           </p>
+
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+            <a
+              href="#challenges"
+              onClick={() => trackEvent('nav_challenges')}
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 px-4 text-sm font-bold text-zinc-200 transition-colors hover:bg-zinc-900"
+            >
+              🎯 Retos
+            </a>
+            <a
+              href="#certificate"
+              onClick={() => trackEvent('nav_certificate')}
+              className="inline-flex h-10 items-center justify-center rounded-xl bg-indigo-500 px-4 text-sm font-bold text-white transition-colors hover:bg-indigo-400"
+            >
+              🏆 Certificado
+            </a>
+          </div>
 
           <div className="mx-auto mt-6 w-full max-w-xl text-left">
             <label htmlFor="lesson-search" className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">
@@ -342,6 +395,151 @@ function App() {
                 </Card>
               </div>
             )}
+
+            {showMetrics && (
+              <div className="mt-4">
+                <Card className="p-5">
+                  <div className="mb-3 text-sm font-extrabold text-zinc-100">Supabase (cloud sync)</div>
+                  {!supabase ? (
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-500">
+                      Falta configurar variables de entorno. En Vite podés usar <span className="font-mono">VITE_*</span> o también{' '}
+                      <span className="font-mono">NEXT_PUBLIC_*</span> (ya está habilitado).
+                    </div>
+                  ) : (
+                    <div className="grid gap-3">
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <div>
+                          <div className="mb-2 text-xs font-bold tracking-widest text-zinc-500">EMAIL</div>
+                          <input
+                            value={sbEmail}
+                            onChange={(e) => setSbEmail(e.target.value)}
+                            placeholder="tu@email.com"
+                            className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+                          />
+                        </div>
+                        <div>
+                          <div className="mb-2 text-xs font-bold tracking-widest text-zinc-500">ESTADO</div>
+                          <div className="flex h-10 items-center rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-300">
+                            {sbUser?.email ? `Conectado: ${sbUser.email}` : 'No conectado'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {sbMsg && <div className="text-sm text-zinc-500">{sbMsg}</div>}
+
+                      <div className="flex flex-wrap gap-2">
+                        {!sbUser ? (
+                          <button
+                            disabled={sbBusy || !sbEmail.trim()}
+                            onClick={async () => {
+                              setSbBusy(true)
+                              setSbMsg('')
+                              try {
+                                await signInWithEmailOtp(sbEmail.trim())
+                                trackEvent('supabase_signin_otp')
+                                setSbMsg('Te envié un link al email. Abrilo para completar el login.')
+                              } catch (e) {
+                                setSbMsg(e?.message ?? 'No se pudo iniciar sesión.')
+                              } finally {
+                                setSbBusy(false)
+                              }
+                            }}
+                            className="inline-flex h-10 items-center justify-center rounded-xl bg-indigo-500 px-4 text-sm font-bold text-white transition-colors hover:bg-indigo-400 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
+                          >
+                            Conectar
+                          </button>
+                        ) : (
+                          <button
+                            disabled={sbBusy}
+                            onClick={async () => {
+                              setSbBusy(true)
+                              setSbMsg('')
+                              try {
+                                await signOut()
+                                trackEvent('supabase_signout')
+                                setSbMsg('Sesión cerrada.')
+                              } catch (e) {
+                                setSbMsg(e?.message ?? 'No se pudo cerrar sesión.')
+                              } finally {
+                                setSbBusy(false)
+                              }
+                            }}
+                            className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 px-4 text-sm font-bold text-zinc-200 transition-colors hover:bg-zinc-900 disabled:cursor-not-allowed"
+                          >
+                            Desconectar
+                          </button>
+                        )}
+
+                        <button
+                          disabled={sbBusy || !sbUser}
+                          onClick={async () => {
+                            setSbBusy(true)
+                            setSbMsg('')
+                            try {
+                              await pushAllToSupabase()
+                              trackEvent('supabase_push_all')
+                              setSbMsg('Subido: perfil + progreso + certificado + eventos.')
+                            } catch (e) {
+                              setSbMsg(e?.message ?? 'No se pudo subir.')
+                            } finally {
+                              setSbBusy(false)
+                            }
+                          }}
+                          className="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-500 px-4 text-sm font-bold text-white transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
+                        >
+                          Subir
+                        </button>
+
+                        <button
+                          disabled={sbBusy || !sbUser}
+                          onClick={async () => {
+                            setSbBusy(true)
+                            setSbMsg('')
+                            try {
+                              await pullAllFromSupabase()
+                              trackEvent('supabase_pull_all')
+                              setSbMsg('Descargado: perfil + progreso + certificado. Recargá la página para ver todo actualizado.')
+                            } catch (e) {
+                              setSbMsg(e?.message ?? 'No se pudo descargar.')
+                            } finally {
+                              setSbBusy(false)
+                            }
+                          }}
+                          className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 px-4 text-sm font-bold text-zinc-200 transition-colors hover:bg-zinc-900 disabled:cursor-not-allowed"
+                        >
+                          Descargar
+                        </button>
+
+                        <button
+                          disabled={sbBusy || !sbUser}
+                          onClick={async () => {
+                            setSbBusy(true)
+                            setSbMsg('')
+                            try {
+                              await pullEventsFromSupabase(500)
+                              trackEvent('supabase_pull_events')
+                              setSbMsg('Eventos descargados (máx 500).')
+                            } catch (e) {
+                              setSbMsg(e?.message ?? 'No se pudieron traer eventos.')
+                            } finally {
+                              setSbBusy(false)
+                            }
+                          }}
+                          className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 px-4 text-sm font-bold text-zinc-200 transition-colors hover:bg-zinc-900 disabled:cursor-not-allowed"
+                        >
+                          Traer eventos
+                        </button>
+                      </div>
+
+                      <div className="text-xs text-zinc-600">
+                        Tablas esperadas en Supabase: <span className="font-mono">profiles</span>, <span className="font-mono">progress</span>,{' '}
+                        <span className="font-mono">certificates</span>, <span className="font-mono">events</span>.
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              </div>
+            )}
           </div>
 
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -408,12 +606,12 @@ function App() {
                   </div>
                   <button
                     onClick={() => {
-                      trackEvent('certificate_print')
-                      window.print()
+                      trackEvent('nav_certificate')
+                      window.location.hash = '#certificate'
                     }}
                     className="mt-3 inline-flex h-10 items-center justify-center rounded-xl bg-indigo-500 px-4 text-sm font-bold text-white transition-colors hover:bg-indigo-400"
                   >
-                    Imprimir certificado
+                    Abrir certificado
                   </button>
                 </div>
               ) : (

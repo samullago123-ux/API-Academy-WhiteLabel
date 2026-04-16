@@ -80,8 +80,8 @@ export default function AdvancedAPILab() {
             restartButtonText="🔄 Quiz nuevo (preguntas aleatorias)"
             gradientClassName="accent-amber-500"
             primaryClassName="bg-indigo-500 hover:bg-indigo-400"
-            onComplete={({ score, total, pct }) => {
-              recordQuizAttempt('advanced', { score, total, pct, at: Date.now() })
+            onComplete={({ score, total, pct, wrongQuestions }) => {
+              recordQuizAttempt('advanced', { score, total, pct, wrongQuestions, at: Date.now() })
               trackEvent('quiz_complete', { labId: 'advanced', score, total, pct })
             }}
           />

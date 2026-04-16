@@ -81,8 +81,8 @@ export default function ExpertAPILab() {
             restartButtonText="🔄 Quiz nuevo (preguntas aleatorias)"
             gradientClassName="accent-red-500"
             primaryClassName="bg-indigo-500 hover:bg-indigo-400"
-            onComplete={({ score, total, pct }) => {
-              recordQuizAttempt('expert', { score, total, pct, at: Date.now() })
+            onComplete={({ score, total, pct, wrongQuestions }) => {
+              recordQuizAttempt('expert', { score, total, pct, wrongQuestions, at: Date.now() })
               trackEvent('quiz_complete', { labId: 'expert', score, total, pct })
             }}
           />

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
-import { shuffle } from '../utils/shuffle'
-import { cn } from '../utils/cn'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { shuffle } from '../utils/shuffle.js'
+import { cn } from '../utils/cn.js'
 
 export default function Quiz({ 
   questionsBank, 
@@ -11,6 +11,7 @@ export default function Quiz({
   restartButtonText = "🔄 Intentar de nuevo",
   gradientClassName = "accent-indigo-500",
   primaryClassName = "bg-indigo-500 hover:bg-indigo-400",
+  timeLimitSec,
   onComplete
 }) {
   const [questions, setQuestions] = useState([]);
@@ -20,24 +21,40 @@ export default function Quiz({
   const [finished, setFinished] = useState(false);
   const [showExplain, setShowExplain] = useState(false);
   const [shuffledOpts, setShuffledOpts] = useState([]);
+  const [secondsLeft, setSecondsLeft] = useState(null)
   const reportedRef = useRef(false)
+  const wrongRef = useRef([])
 
   useEffect(() => {
     const q = shuffle(questionsBank).slice(0, questionCount);
     setQuestions(q);
     if (q[0]) setShuffledOpts(shuffle(q[0].opts));
     reportedRef.current = false
-  }, [questionsBank, questionCount]);
+    wrongRef.current = []
+    setSecondsLeft(typeof timeLimitSec === 'number' ? Math.max(0, Math.floor(timeLimitSec)) : null)
+  }, [questionsBank, questionCount, timeLimitSec]);
 
   useEffect(() => {
     if (questions[current]) setShuffledOpts(shuffle(questions[current].opts));
   }, [current, questions]);
+
+  useEffect(() => {
+    if (secondsLeft === null) return
+    if (finished) return
+    if (secondsLeft <= 0) {
+      setFinished(true)
+      return
+    }
+    const id = window.setTimeout(() => setSecondsLeft((s) => (s === null ? null : s - 1)), 1000)
+    return () => window.clearTimeout(id)
+  }, [secondsLeft, finished])
 
   function selectAnswer(opt) {
     if (selected !== null) return;
     setSelected(opt);
     setShowExplain(true);
     if (opt === questions[current].correct) setScore(score + 1);
+    else wrongRef.current = [...wrongRef.current, questions[current].q]
   }
 
   function nextQuestion() {
@@ -60,22 +77,24 @@ export default function Quiz({
     setFinished(false);
     setShowExplain(false);
     reportedRef.current = false
+    wrongRef.current = []
+    setSecondsLeft(typeof timeLimitSec === 'number' ? Math.max(0, Math.floor(timeLimitSec)) : null)
   }
+
+  const total = questions.length
+  const pct = useMemo(() => (total ? Math.round((score / total) * 100) : 0), [score, total])
 
   useEffect(() => {
     if (!finished) return
     if (reportedRef.current) return
-    const total = questions.length
     if (!total) return
-    const pct = Math.round((score / total) * 100)
     reportedRef.current = true
-    onComplete?.({ score, total, pct })
-  }, [finished, score, questions.length, onComplete])
+    onComplete?.({ score, total, pct, wrongQuestions: wrongRef.current })
+  }, [finished, score, total, pct, onComplete])
 
   if (questions.length === 0) return null;
 
   if (finished) {
-    const pct = Math.round((score / questions.length) * 100);
     const emoji = pct >= thresholds.high ? "🏆" : pct >= thresholds.medium ? "👍" : "📚";
     const msg = pct >= thresholds.high ? messages.high : pct >= thresholds.medium ? messages.medium : messages.low;
     return (
@@ -114,7 +133,9 @@ export default function Quiz({
         <span className="text-xs text-zinc-500">
           Pregunta {current + 1} de {questions.length}
         </span>
-        <span className="text-sm font-bold text-emerald-400">Score: {score}</span>
+        <span className="text-sm font-bold text-emerald-400">
+          {secondsLeft === null ? `Score: ${score}` : `⏱ ${secondsLeft}s · ${score}/${questions.length}`}
+        </span>
       </div>
 
       <progress
@@ -136,7 +157,7 @@ export default function Quiz({
             <button
               key={idx}
               onClick={() => selectAnswer(opt)}
-              disabled={selected !== null}
+              disabled={selected !== null || (secondsLeft !== null && secondsLeft <= 0)}
               className={cn(
                 'rounded-xl border-2 px-4 py-4 text-left text-sm font-medium transition-colors',
                 base,

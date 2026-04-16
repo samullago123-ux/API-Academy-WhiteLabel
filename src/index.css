@@ -80,3 +80,22 @@
     @apply bg-zinc-950 text-zinc-200 antialiased font-sans;
   }
 }
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-certificate {
+    background: white !important;
+  }
+
+  .print-certificate .certificate-page {
+    padding: 0 !important;
+  }
+}

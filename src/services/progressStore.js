@@ -15,6 +15,12 @@ export function loadAllProgress() {
   return parsed && typeof parsed === 'object' ? parsed : {}
 }
 
+export function saveAllProgress(all) {
+  if (typeof window === 'undefined') return
+  if (!all || typeof all !== 'object') return
+  window.localStorage.setItem(KEY, JSON.stringify(all))
+}
+
 export function loadLabProgress(labId, defaults) {
   const all = loadAllProgress()
   const existing = all?.[labId]
@@ -44,11 +50,15 @@ export function saveLabProgress(labId, patch) {
 export function recordQuizAttempt(labId, attempt, maxItems = 20) {
   const current = loadLabProgress(labId, { quiz: { history: [] } })
   const history = Array.isArray(current?.quiz?.history) ? current.quiz.history : []
+  const wrongQuestions = Array.isArray(attempt?.wrongQuestions)
+    ? attempt.wrongQuestions.map(String).filter(Boolean).slice(0, 50)
+    : []
   const nextAttempt = {
     score: Number(attempt?.score ?? 0),
     total: Number(attempt?.total ?? 0),
     pct: Number(attempt?.pct ?? 0),
     at: Number(attempt?.at ?? Date.now()),
+    wrongQuestions,
   }
   const nextHistory = [nextAttempt, ...history].slice(0, maxItems)
   const bestPct = Math.max(current?.quiz?.bestPct ?? 0, nextAttempt.pct)

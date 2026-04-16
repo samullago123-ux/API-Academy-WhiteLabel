@@ -68,8 +68,8 @@ export default function APILearningLab() {
               medium: '¡Bien! Repasá los conceptos que fallaste.',
               low: 'Necesitás repasar. Volvé a las lecciones.',
             }}
-            onComplete={({ score, total, pct }) => {
-              recordQuizAttempt('basics', { score, total, pct, at: Date.now() })
+            onComplete={({ score, total, pct, wrongQuestions }) => {
+              recordQuizAttempt('basics', { score, total, pct, wrongQuestions, at: Date.now() })
               trackEvent('quiz_complete', { labId: 'basics', score, total, pct })
             }}
           />

@@ -1,4 +1,4 @@
-import { cn } from '../utils/cn'
+import { cn } from '../utils/cn.js'
 
 export function Container({ className, ...props }) {
   return <div className={cn('mx-auto w-full max-w-5xl px-4', className)} {...props} />
@@ -108,4 +108,3 @@ export function CodeBlock({ className, ...props }) {
     />
   )
 }
-
