@@ -1,5 +1,46 @@
 const KEY = 'api-academy-analytics:v1'
 const SESSION_KEY = 'api-academy-session:v1'
+const API_ENABLED_KEY = 'api-academy-api-enabled:v1'
+
+let flushTimer = null
+let pending = []
+
+function isApiEnabled() {
+  if (typeof window === 'undefined') return false
+  return window.localStorage.getItem(API_ENABLED_KEY) === '1'
+}
+
+async function tryFetch(url, init) {
+  try {
+    const r = await fetch(url, init)
+    if (!r.ok) return false
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function flushToServer() {
+  if (typeof window === 'undefined') return
+  if (!isApiEnabled()) return
+  if (pending.length === 0) return
+  const batch = pending
+  pending = []
+  flushTimer = null
+
+  const { getUserId } = await import('./userId.js')
+  const userId = getUserId()
+  const ok = await tryFetch(`/api/events/${encodeURIComponent(userId)}/bulk`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ events: batch }),
+    keepalive: true,
+  })
+
+  if (!ok) {
+    pending = [...batch, ...pending].slice(0, 2000)
+  }
+}
 
 function safeParse(json) {
   try {
@@ -52,6 +93,15 @@ export function trackEvent(name, props = {}) {
   }
   const next = [evt, ...events].slice(0, 2000)
   saveEvents(next)
+
+  if (isApiEnabled()) {
+    pending = [evt, ...pending].slice(0, 2000)
+    if (!flushTimer) {
+      flushTimer = window.setTimeout(() => {
+        void flushToServer()
+      }, 800)
+    }
+  }
 }
 
 function dayKey(ts) {
@@ -113,4 +163,3 @@ export function aggregateMetrics(events) {
     topSearches,
   }
 }
-

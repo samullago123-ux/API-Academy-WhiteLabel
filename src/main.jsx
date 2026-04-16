@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import { Badge, Card, Container } from './components/ui'
-import { loadAllProgress, saveLabProgress } from './services/progressStore.js'
+import { hydrateAllProgressFromServer, loadAllProgress, saveLabProgress } from './services/progressStore.js'
 import { aggregateMetrics, clearEvents, loadEvents, trackEvent } from './services/analytics.js'
 import { initTheme } from './theme/theme.js'
 
@@ -108,6 +108,7 @@ function App() {
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
+  const [, setProgressVersion] = useState(0)
   const progress = loadAllProgress()
   const [searchQuery, setSearchQuery] = useState('')
   const [showMetrics, setShowMetrics] = useState(false)
@@ -121,6 +122,7 @@ function App() {
 
   useEffect(() => {
     trackEvent('app_open')
+    hydrateAllProgressFromServer().then(() => setProgressVersion((x) => x + 1))
   }, [])
 
   useEffect(() => {

@@ -31,6 +31,17 @@ export default [
     },
   },
   {
+    files: ['server/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: globals.node,
+    },
+    rules: {
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+    },
+  },
+  {
     files: ['**/*.test.{js,jsx}', 'src/test/**/*.js'],
     languageOptions: {
       globals: {
