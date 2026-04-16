@@ -1,26 +1,4 @@
 const KEY = 'api-academy-progress:v1'
-const API_ENABLED_KEY = 'api-academy-api-enabled:v1'
-
-async function tryFetch(url, init) {
-  try {
-    const r = await fetch(url, init)
-    if (!r.ok) return null
-    return r
-  } catch {
-    return null
-  }
-}
-
-function isApiEnabled() {
-  if (typeof window === 'undefined') return false
-  const value = window.localStorage.getItem(API_ENABLED_KEY)
-  return value === '1'
-}
-
-function setApiEnabled(enabled) {
-  if (typeof window === 'undefined') return
-  window.localStorage.setItem(API_ENABLED_KEY, enabled ? '1' : '0')
-}
 
 function safeParse(json) {
   try {
@@ -61,18 +39,6 @@ export function saveLabProgress(labId, patch) {
   }
   const merged = { ...all, [labId]: next }
   window.localStorage.setItem(KEY, JSON.stringify(merged))
-
-  if (isApiEnabled()) {
-    import('./userId.js').then(({ getUserId }) => {
-      const userId = getUserId()
-      void tryFetch(`/api/progress/${encodeURIComponent(userId)}/${encodeURIComponent(labId)}`, {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(next),
-        keepalive: true,
-      })
-    })
-  }
 }
 
 export function recordQuizAttempt(labId, attempt, maxItems = 20) {
@@ -95,28 +61,4 @@ export function recordQuizAttempt(labId, attempt, maxItems = 20) {
       history: nextHistory,
     },
   })
-}
-
-export async function hydrateAllProgressFromServer() {
-  if (typeof window === 'undefined') return loadAllProgress()
-  const { getUserId } = await import('./userId.js')
-  const userId = getUserId()
-
-  const r = await tryFetch(`/api/progress/${encodeURIComponent(userId)}`, { method: 'GET' })
-  if (!r) {
-    setApiEnabled(false)
-    return loadAllProgress()
-  }
-
-  const remote = await r.json().catch(() => null)
-  if (!remote || typeof remote !== 'object') {
-    setApiEnabled(false)
-    return loadAllProgress()
-  }
-
-  setApiEnabled(true)
-  const local = loadAllProgress()
-  const merged = { ...local, ...remote }
-  window.localStorage.setItem(KEY, JSON.stringify(merged))
-  return merged
 }
