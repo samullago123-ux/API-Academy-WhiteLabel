@@ -122,25 +122,43 @@
 
   .print-certificate .certificate-page {
     padding: 0 !important;
+    page-break-inside: avoid;
+  }
+
+  .print-certificate .certificate-frame {
     width: 210mm !important;
     height: 297mm !important;
-    page-break-inside: avoid;
+    border-radius: 0 !important;
     overflow: hidden !important;
   }
 
-  .print-certificate .certificate-sheet {
-    box-shadow: none !important;
-    border-color: rgb(228 228 231) !important;
-  }
-
   .print-certificate .certificate-canvas {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
     width: 210mm !important;
     height: 297mm !important;
     padding: 14mm !important;
   }
 }
 
+.certificate-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  aspect-ratio: 1 / 1;
+}
+
 .certificate-canvas {
-  width: min(920px, 100%);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
   aspect-ratio: 210 / 297;
+  transform: translate(-50%, -50%) scale(0.98);
+  transform-origin: center;
 }

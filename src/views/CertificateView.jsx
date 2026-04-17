@@ -227,13 +227,14 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
               </div>
               <div className="mt-1 text-xs text-zinc-500">Imprimir → Guardar como PDF</div>
             </div>
-            <div className="certificate-page relative overflow-hidden">
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-indigo-500 via-sky-400 to-emerald-500 opacity-85" />
-              <div className="pointer-events-none absolute inset-0 opacity-70 mix-blend-overlay [background:radial-gradient(60rem_60rem_at_20%_10%,rgba(255,255,255,0.25),transparent_55%),radial-gradient(50rem_50rem_at_80%_90%,rgba(255,255,255,0.20),transparent_55%)]" />
-              <div className="pointer-events-none absolute -right-28 -top-28 h-96 w-96 rounded-full bg-white/25 blur-3xl" />
-              <div className="pointer-events-none absolute -bottom-36 -left-36 h-[28rem] w-[28rem] rounded-full bg-white/15 blur-3xl" />
+            <div className="certificate-page">
+              <div className="certificate-frame">
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-indigo-500 via-sky-400 to-emerald-500 opacity-85" />
+                <div className="pointer-events-none absolute inset-0 opacity-70 mix-blend-overlay [background:radial-gradient(60rem_60rem_at_20%_10%,rgba(255,255,255,0.25),transparent_55%),radial-gradient(50rem_50rem_at_80%_90%,rgba(255,255,255,0.20),transparent_55%)]" />
+                <div className="pointer-events-none absolute -right-28 -top-28 h-96 w-96 rounded-full bg-white/25 blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-36 -left-36 h-[28rem] w-[28rem] rounded-full bg-white/15 blur-3xl" />
 
-              <div className="certificate-canvas relative mx-auto p-7 sm:p-9">
+                <div className="certificate-canvas relative p-7 sm:p-9">
                 <div className="flex flex-wrap items-start justify-between gap-6">
                   <BrandMark tone="onColor" subtitle="Eficiencia operativa con automatización e IA" />
                   <div className="text-right">
@@ -320,6 +321,7 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
                 )}
               </div>
             </div>
+          </div>
           </Card>
         </div>
       </Container>
