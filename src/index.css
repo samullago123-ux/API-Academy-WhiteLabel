@@ -87,6 +87,12 @@
     margin: 0;
   }
 
+  html,
+  body {
+    width: 210mm;
+    height: 297mm;
+  }
+
   body {
     background: rgb(9 9 11) !important;
     color: black !important;
@@ -98,16 +104,43 @@
     display: none !important;
   }
 
+  .print-certificate .mx-auto.w-full.max-w-5xl.px-4 {
+    max-width: none !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .print-certificate .py-10 {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
   .print-certificate {
     background: rgb(9 9 11) !important;
+    overflow: hidden !important;
   }
 
   .print-certificate .certificate-page {
     padding: 0 !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    page-break-inside: avoid;
+    overflow: hidden !important;
   }
 
   .print-certificate .certificate-sheet {
     box-shadow: none !important;
     border-color: rgb(228 228 231) !important;
   }
+
+  .print-certificate .certificate-canvas {
+    width: 210mm !important;
+    height: 297mm !important;
+    padding: 14mm !important;
+  }
+}
+
+.certificate-canvas {
+  width: min(920px, 100%);
+  aspect-ratio: 210 / 297;
 }

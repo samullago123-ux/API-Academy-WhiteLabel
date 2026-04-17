@@ -1,8 +1,8 @@
 import { cn } from '../utils/cn.js'
 
 export function BrandMark({ className, subtitle = 'Automatización e IA', compact = false, tone = 'dark' }) {
-  const titleClass = tone === 'light' ? 'text-zinc-900' : 'text-zinc-100'
-  const subtitleClass = tone === 'light' ? 'text-zinc-600' : 'text-zinc-500'
+  const titleClass = tone === 'light' ? 'text-zinc-900' : tone === 'onColor' ? 'text-white' : 'text-zinc-100'
+  const subtitleClass = tone === 'light' ? 'text-zinc-600' : tone === 'onColor' ? 'text-white/80' : 'text-zinc-500'
   return (
     <div className={cn('flex items-center gap-2', className)}>
       <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-sky-400 via-indigo-400 to-emerald-400">
