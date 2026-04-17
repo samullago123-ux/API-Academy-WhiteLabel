@@ -1,4 +1,4 @@
-import { Badge, Button, Card, CardBody, CardHeader, Container, ProgressBar, Tabs } from './ui'
+import { Badge, BrandMark, Button, Card, CardBody, CardHeader, Container, ProgressBar, Tabs } from './ui'
 
 export default function LabLayout({
   icon,
@@ -28,10 +28,13 @@ export default function LabLayout({
     <div className="min-h-screen">
       <div className="border-b border-zinc-800 bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900/20 py-5">
         <Container>
-          <div className="flex items-center gap-3">
-            <div className="text-2xl">{icon}</div>
-            <h1 className={titleClassName ?? 'text-xl font-black tracking-tight'}>{title}</h1>
-            <Badge color={levelColor}>{levelLabel}</Badge>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="text-2xl">{icon}</div>
+              <h1 className={titleClassName ?? 'text-xl font-black tracking-tight'}>{title}</h1>
+              <Badge color={levelColor}>{levelLabel}</Badge>
+            </div>
+            <BrandMark compact />
           </div>
           <p className="mt-1 text-sm text-zinc-400">{subtitle}</p>
 

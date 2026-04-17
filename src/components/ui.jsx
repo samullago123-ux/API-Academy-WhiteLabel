@@ -1,5 +1,39 @@
 import { cn } from '../utils/cn.js'
 
+export function BrandMark({ className, subtitle = 'Automatización e IA', compact = false, tone = 'dark' }) {
+  const titleClass = tone === 'light' ? 'text-zinc-900' : 'text-zinc-100'
+  const subtitleClass = tone === 'light' ? 'text-zinc-600' : 'text-zinc-500'
+  return (
+    <div className={cn('flex items-center gap-2', className)}>
+      <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-sky-400 via-indigo-400 to-emerald-400">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M12 2.6 19.5 7v10L12 21.4 4.5 17V7L12 2.6Z"
+            stroke="rgb(9 9 11)"
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+          <circle cx="12" cy="6.8" r="1.6" fill="rgb(9 9 11)" />
+          <circle cx="7.4" cy="10.2" r="1.6" fill="rgb(9 9 11)" />
+          <circle cx="16.6" cy="10.2" r="1.6" fill="rgb(9 9 11)" />
+          <circle cx="12" cy="16.6" r="1.6" fill="rgb(9 9 11)" />
+          <path
+            d="M12 8.4v6.6M9 11.2l3 1.8 3-1.8"
+            stroke="rgb(9 9 11)"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+      <div className="min-w-0">
+        <div className={cn('text-sm font-black tracking-wide', titleClass)}>Whitelabel AI</div>
+        {!compact && <div className={cn('truncate text-[11px]', subtitleClass)}>{subtitle}</div>}
+      </div>
+    </div>
+  )
+}
+
 export function Container({ className, ...props }) {
   return <div className={cn('mx-auto w-full max-w-5xl px-4', className)} {...props} />
 }

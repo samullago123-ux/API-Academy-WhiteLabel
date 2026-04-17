@@ -254,7 +254,7 @@ function App() {
 
           <div className="mt-2 flex items-center justify-center gap-2">
             <span className="text-xs font-bold uppercase tracking-[0.22em] text-zinc-800">by</span>
-            <span className="text-sm font-extrabold tracking-widest text-zinc-500">WHITELABEL</span>
+            <span className="text-sm font-extrabold tracking-widest text-zinc-500">WHITELABEL AI</span>
           </div>
 
           <p className="mt-6 text-sm leading-relaxed text-zinc-500">
@@ -625,7 +625,7 @@ function App() {
             </Card>
           </div>
 
-          <p className="mt-10 text-xs text-zinc-600">Whitelabel SAS — Semillero de Automatización</p>
+          <p className="mt-10 text-xs text-zinc-600">Whitelabel AI — Eficiencia operativa con automatización e IA</p>
         </div>
       </Container>
     </div>

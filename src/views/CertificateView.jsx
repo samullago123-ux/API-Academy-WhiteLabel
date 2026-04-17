@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Badge, Button, Card, Container } from '../components/ui.jsx'
+import { Badge, BrandMark, Button, Card, Container } from '../components/ui.jsx'
 import { trackEvent } from '../services/analytics.js'
 import { issueCertificate, isCertificateEligible, loadCertificate } from '../services/certificateStore.js'
 import { loadProfile, saveProfile } from '../services/profileStore.js'
@@ -202,61 +202,85 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
           </Card>
 
           <Card className="p-0">
-            <div className="border-b border-zinc-800 px-6 py-5">
+            <div className="no-print border-b border-zinc-800 px-6 py-5">
               <div className="flex items-center justify-between">
                 <div className="text-sm font-extrabold text-zinc-100">Vista previa</div>
                 {certificate ? <Badge color="emerald">LISTO</Badge> : <Badge color="zinc">PENDIENTE</Badge>}
               </div>
               <div className="mt-1 text-xs text-zinc-500">Imprimir → Guardar como PDF</div>
             </div>
-            <div className="certificate-page px-8 py-10">
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-8">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-xs font-bold tracking-widest text-zinc-500">CERTIFICADO DE FINALIZACIÓN</div>
-                  <div className="text-2xl">🏆</div>
-                </div>
-                <div className="mt-3 text-3xl font-black text-zinc-100">API Academy</div>
-                <div className="mt-2 text-sm text-zinc-400">
-                  Se certifica que
-                </div>
-                <div className="mt-2 text-2xl font-extrabold text-zinc-100">
-                  {certificate?.displayName || displayName.trim() || '—'}
-                </div>
-                <div className="mt-2 text-sm text-zinc-400">
-                  completó satisfactoriamente el programa de aprendizaje.
-                </div>
+            <div className="certificate-page bg-zinc-950/40 px-6 py-8 sm:px-10 sm:py-10">
+              <div className="certificate-sheet relative mx-auto overflow-hidden rounded-[28px] border border-zinc-200 bg-zinc-50 p-8 shadow-[0_20px_80px_rgba(0,0,0,0.35)] sm:p-10">
+                <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-indigo-300/40 blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-28 -left-28 h-72 w-72 rounded-full bg-emerald-300/40 blur-3xl" />
+                <div className="pointer-events-none absolute inset-3 rounded-[22px] border border-zinc-200" />
 
-                <div className="mt-6 grid gap-2 sm:grid-cols-3">
-                  {levels.map((l) => (
-                    <div key={l.hash} className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3">
-                      <div className="text-[11px] font-bold tracking-widest text-zinc-500">{l.badge}</div>
-                      <div className="mt-1 text-sm font-bold text-zinc-100">{l.title}</div>
-                      <div className="mt-1 text-xs text-zinc-500">
-                        Best quiz: {certificate?.scores?.[l.hash]?.bestPct ?? progress?.[l.hash]?.quiz?.bestPct ?? 0}%
+                <div className="relative">
+                  <div className="flex flex-wrap items-start justify-between gap-6">
+                    <BrandMark tone="light" subtitle="Eficiencia operativa con automatización e IA" />
+                    <div className="text-right">
+                      <div className="text-[11px] font-bold tracking-[0.22em] text-zinc-600">CERTIFICADO</div>
+                      <div className="mt-1 text-sm font-extrabold text-zinc-900">API Academy</div>
+                      <div className="mt-1 text-xs text-zinc-600">
+                        ID:{' '}
+                        <span className="font-mono font-bold text-zinc-900">
+                          {certificate?.id ?? '—'}
+                        </span>
                       </div>
                     </div>
-                  ))}
-                </div>
-
-                <div className="mt-6 flex flex-wrap items-end justify-between gap-4 border-t border-zinc-800 pt-5">
-                  <div>
-                    <div className="text-xs text-zinc-500">Fecha</div>
-                    <div className="text-sm font-bold text-zinc-200">{formatDate(certificate?.issuedAt ?? Date.now())}</div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-xs text-zinc-500">Código</div>
-                    <div className="font-mono text-xs font-bold text-zinc-200">{certificate?.id ?? '—'}</div>
-                    <div className="mt-1 text-[11px] text-zinc-600">
-                      Verificar: <span className="font-mono">/#verify={certificate?.id ?? '...'}</span>
+
+                  <div className="mt-10 text-center">
+                    <div className="text-[11px] font-bold tracking-[0.30em] text-zinc-600">CERTIFICADO DE FINALIZACIÓN</div>
+                    <div className="mx-auto mt-4 h-px w-48 bg-gradient-to-r from-transparent via-amber-400 to-transparent" />
+                    <div className="mt-6 text-sm text-zinc-700">Se certifica que</div>
+                    <div className="mt-3 text-3xl font-black tracking-tight text-zinc-900 sm:text-4xl">
+                      {certificate?.displayName || displayName.trim() || '—'}
+                    </div>
+                    <div className="mt-3 text-sm leading-relaxed text-zinc-700">
+                      completó satisfactoriamente el programa de aprendizaje de APIs y arquitectura, con evaluación por nivel.
                     </div>
                   </div>
-                </div>
 
-                {certificate?.signature && (
-                  <div className="mt-4 text-[11px] text-zinc-600">
-                    Firma: <span className="font-mono">{certificate.signature.slice(0, 24)}…</span>
+                  <div className="mt-10 grid gap-3 sm:grid-cols-3">
+                    {levels.map((l) => (
+                      <div key={l.hash} className="rounded-2xl border border-zinc-200 bg-white px-5 py-4">
+                        <div className="text-[11px] font-bold tracking-widest text-zinc-600">{l.badge}</div>
+                        <div className="mt-1 text-sm font-extrabold text-zinc-900">{l.title}</div>
+                        <div className="mt-2 text-xs text-zinc-600">
+                          Best quiz:{' '}
+                          <span className="font-bold text-zinc-900">
+                            {certificate?.scores?.[l.hash]?.bestPct ?? progress?.[l.hash]?.quiz?.bestPct ?? 0}%
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                )}
+
+                  <div className="mt-10 grid gap-6 border-t border-zinc-200 pt-6 sm:grid-cols-2">
+                    <div>
+                      <div className="text-xs text-zinc-600">Fecha</div>
+                      <div className="mt-1 text-sm font-bold text-zinc-900">{formatDate(certificate?.issuedAt ?? Date.now())}</div>
+                      <div className="mt-4 max-w-sm text-[11px] text-zinc-600">
+                        Verificación: <span className="font-mono">/#verify={certificate?.id ?? '...'}</span>
+                      </div>
+                    </div>
+                    <div className="sm:text-right">
+                      <div className="text-xs text-zinc-600">Emite</div>
+                      <div className="mt-1 text-sm font-extrabold text-zinc-900">Whitelabel AI</div>
+                      <div className="mt-4 flex flex-col items-start gap-2 sm:items-end">
+                        <div className="h-px w-56 bg-zinc-300" />
+                        <div className="text-xs font-bold text-zinc-700">Dirección Académica</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {certificate?.signature && (
+                    <div className="mt-5 text-[11px] text-zinc-600">
+                      Firma: <span className="font-mono">{certificate.signature.slice(0, 28)}…</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </Card>

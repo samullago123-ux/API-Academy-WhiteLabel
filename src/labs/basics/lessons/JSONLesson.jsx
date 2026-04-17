@@ -6,7 +6,7 @@ export default function JSONLesson() {
   "nombre": "Daniel",
   "edad": 28,
   "empresa": {
-    "nombre": "Whitelabel SAS",
+    "nombre": "Whitelabel AI",
     "servicios": ["AI Agents", "Automatización", "Software"]
   },
   "activo": true,
