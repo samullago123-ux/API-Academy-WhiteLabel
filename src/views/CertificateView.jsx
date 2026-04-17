@@ -16,7 +16,9 @@ function formatDate(ts) {
   }
 }
 
-function CertificateContent({ certificate, displayName, progress, levels, keyLearnings }) {
+function CertificateContent({ certificate, displayName, progress, levels, keyLearnings, preferDraftName = false }) {
+  const draftName = displayName.trim()
+  const finalName = preferDraftName ? (draftName || certificate?.displayName || '—') : (certificate?.displayName || draftName || '—')
   return (
     <div className="certificate-inner p-7 sm:p-9">
       <div className="flex flex-wrap items-start justify-between gap-6">
@@ -38,7 +40,7 @@ function CertificateContent({ certificate, displayName, progress, levels, keyLea
         <div className="mx-auto mt-4 h-px w-48 bg-gradient-to-r from-transparent via-white/70 to-transparent" />
         <div className="mt-6 text-sm text-zinc-100/90">Se certifica que</div>
         <div className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">
-          {certificate?.displayName || displayName.trim() || '—'}
+          {finalName}
         </div>
         <div className="mt-3 text-sm leading-relaxed text-zinc-100/85">
           completó satisfactoriamente el programa de aprendizaje de APIs y arquitectura, con evaluación por nivel.
@@ -332,6 +334,7 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
                     progress={progress}
                     levels={levels}
                     keyLearnings={keyLearnings}
+                    preferDraftName
                   />
                 </div>
               </div>
