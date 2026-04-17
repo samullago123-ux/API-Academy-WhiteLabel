@@ -91,8 +91,12 @@ function formatDate(ts) {
   }
 }
 
-function parseRoute(hash) {
-  const value = String(hash ?? '').replace('#', '')
+function getRouteFromLocation() {
+  const url = new URL(window.location.href)
+  const verify = url.searchParams.get('verify')
+  if (verify) return { view: 'certificate', verifyId: verify }
+
+  const value = String(window.location.hash ?? '').replace('#', '')
   if (value.startsWith('verify=')) return { view: 'certificate', verifyId: value.slice('verify='.length) }
   if (value === 'certificate') return { view: 'certificate', verifyId: null }
   if (value === 'challenges') return { view: 'challenges', verifyId: null }
@@ -103,14 +107,18 @@ function parseRoute(hash) {
 }
 
 function App() {
-  const [route, setRoute] = useState(() => parseRoute(window.location.hash))
+  const [route, setRoute] = useState(() => getRouteFromLocation())
 
   useEffect(() => {
-    function onHash() {
-      setRoute(parseRoute(window.location.hash))
+    function onRouteChange() {
+      setRoute(getRouteFromLocation())
     }
-    window.addEventListener('hashchange', onHash)
-    return () => window.removeEventListener('hashchange', onHash)
+    window.addEventListener('hashchange', onRouteChange)
+    window.addEventListener('popstate', onRouteChange)
+    return () => {
+      window.removeEventListener('hashchange', onRouteChange)
+      window.removeEventListener('popstate', onRouteChange)
+    }
   }, [])
 
   const progress = loadAllProgress()

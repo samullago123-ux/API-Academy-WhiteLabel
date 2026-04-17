@@ -4,7 +4,7 @@ import { trackEvent } from '../services/analytics.js'
 import { issueCertificate, isCertificateEligible, loadCertificate } from '../services/certificateStore.js'
 import { loadProfile, saveProfile } from '../services/profileStore.js'
 import { supabase } from '../services/supabaseClient.js'
-import { verifyCertificatePublic } from '../services/supabaseSync.js'
+import { getSession, pushAllToSupabase, verifyCertificatePublic } from '../services/supabaseSync.js'
 import { verifyCertificateEdge } from '../services/edgeFunctions.js'
 
 function formatDate(ts) {
@@ -19,6 +19,11 @@ function formatDate(ts) {
 function CertificateContent({ certificate, displayName, progress, levels, keyLearnings, preferDraftName = false }) {
   const draftName = displayName.trim()
   const finalName = preferDraftName ? (draftName || certificate?.displayName || '—') : (certificate?.displayName || draftName || '—')
+  const verifyUrl = (() => {
+    if (!certificate?.id) return ''
+    if (typeof window === 'undefined') return `?verify=${certificate.id}`
+    return `${window.location.origin}/?verify=${certificate.id}`
+  })()
   return (
     <div className="certificate-inner p-7 sm:p-9">
       <div className="flex flex-wrap items-start justify-between gap-6">
@@ -80,7 +85,7 @@ function CertificateContent({ certificate, displayName, progress, levels, keyLea
           <div className="text-xs text-white/80">Fecha</div>
           <div className="mt-1 text-sm font-bold text-white">{formatDate(certificate?.issuedAt ?? Date.now())}</div>
           <div className="mt-4 max-w-sm text-[11px] text-white/80">
-            Verificación: <span className="font-mono">/#verify={certificate?.id ?? '...'}</span>
+            Verificación: <span className="font-mono">{verifyUrl || '—'}</span>
           </div>
         </div>
         <div className="sm:text-right">
@@ -117,6 +122,8 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
   const [remoteVerified, setRemoteVerified] = useState(null)
   const [remoteData, setRemoteData] = useState(null)
   const [remoteError, setRemoteError] = useState('')
+  const [shareMsg, setShareMsg] = useState('')
+  const [publishing, setPublishing] = useState(false)
 
   useEffect(() => {
     trackEvent(verifyId ? 'certificate_verify_open' : 'certificate_open', { verifyId: verifyId ?? null })
@@ -178,6 +185,67 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
     }
   }
 
+  const shareUrl = useMemo(() => {
+    if (!certificate?.id) return ''
+    if (typeof window === 'undefined') return `?verify=${certificate.id}`
+    return `${window.location.origin}/?verify=${certificate.id}`
+  }, [certificate?.id])
+
+  const verifyLink = useMemo(() => {
+    if (!verifyId) return ''
+    if (typeof window === 'undefined') return `?verify=${verifyId}`
+    return `${window.location.origin}/?verify=${verifyId}`
+  }, [verifyId])
+
+  const linkedinShareUrl = useMemo(() => {
+    if (!shareUrl) return ''
+    return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`
+  }, [shareUrl])
+
+  const linkedinVerifyShareUrl = useMemo(() => {
+    if (!verifyLink) return ''
+    return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(verifyLink)}`
+  }, [verifyLink])
+
+  async function copyToClipboard(text) {
+    if (!text) return
+    try {
+      await navigator.clipboard.writeText(text)
+      setShareMsg('Link copiado.')
+    } catch {
+      const el = document.createElement('textarea')
+      el.value = text
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+      setShareMsg('Link copiado.')
+    }
+  }
+
+  async function publishToSupabase() {
+    if (!supabase) {
+      setShareMsg('Supabase no está configurado en este entorno.')
+      return
+    }
+    setPublishing(true)
+    setShareMsg('')
+    try {
+      const session = await getSession()
+      if (!session?.user?.id) {
+        setShareMsg('Primero conectate a Supabase desde Home → Ver métricas → Supabase.')
+        return
+      }
+      await pushAllToSupabase()
+      setShareMsg('Publicado en Supabase. El link de verificación ya debería funcionar.')
+      trackEvent('certificate_publish')
+    } catch (e) {
+      setShareMsg(e?.message ?? 'No se pudo publicar en Supabase.')
+    } finally {
+      setPublishing(false)
+    }
+  }
+
   const keyLearnings = [
     {
       badge: 'NIVEL 1',
@@ -235,6 +303,23 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
               </div>
               <Badge color={verified ? 'emerald' : 'red'}>{verified ? 'VÁLIDO' : 'NO ENCONTRADO'}</Badge>
             </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                onClick={() => copyToClipboard(verifyLink)}
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 px-4 text-sm font-bold text-zinc-200 transition-colors hover:bg-zinc-900"
+              >
+                Copiar link
+              </button>
+              <a
+                href={linkedinVerifyShareUrl || '#'}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => trackEvent('share_linkedin')}
+                className="inline-flex h-10 items-center justify-center rounded-xl bg-indigo-500 px-4 text-sm font-bold text-white transition-colors hover:bg-indigo-400"
+              >
+                Compartir en LinkedIn
+              </a>
+            </div>
           </Card>
         )}
 
@@ -287,6 +372,52 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
               <div className="mt-2 text-xs text-zinc-600">
                 Si está activo, el certificado se puede verificar con su ID.
               </div>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+              <div className="text-xs font-bold tracking-widest text-zinc-500">LINK PARA VALIDAR / COMPARTIR</div>
+              {certificate?.id ? (
+                <div className="mt-3">
+                  <div className="mb-2 text-xs text-zinc-500">
+                    Este es el link que podés poner en LinkedIn. Abrelo en incógnito para validar que se vea como “VÁLIDO”.
+                  </div>
+                  <input
+                    readOnly
+                    value={shareUrl}
+                    className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 font-mono text-xs text-zinc-200 outline-none"
+                  />
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button variant="secondary" onClick={() => copyToClipboard(shareUrl)}>
+                      Copiar link
+                    </Button>
+                    <a
+                      href={linkedinShareUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => trackEvent('share_linkedin')}
+                      className="inline-flex h-10 items-center justify-center rounded-xl bg-indigo-500 px-4 text-sm font-bold text-white transition-colors hover:bg-indigo-400"
+                    >
+                      Compartir en LinkedIn
+                    </a>
+                    <Button variant="ghost" onClick={() => window.open(shareUrl, '_blank', 'noreferrer')}>
+                      Abrir
+                    </Button>
+                    <Button variant="ghost" onClick={publishToSupabase} disabled={publishing || !makePublic}>
+                      {publishing ? 'Publicando...' : 'Publicar en Supabase'}
+                    </Button>
+                  </div>
+                  {shareMsg && <div className="mt-3 text-xs text-zinc-500">{shareMsg}</div>}
+                  {!makePublic && (
+                    <div className="mt-2 text-xs text-zinc-600">
+                      Activá “Hacer público” y re-emití el certificado para que el link sea validable.
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-2 text-sm text-zinc-500">
+                  Emití el certificado para generar el link público.
+                </div>
+              )}
             </div>
 
             <div className="mt-5 flex flex-wrap gap-2">
