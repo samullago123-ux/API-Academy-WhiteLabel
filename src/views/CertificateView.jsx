@@ -85,6 +85,24 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
     }
   }
 
+  const keyLearnings = [
+    {
+      badge: 'NIVEL 1',
+      title: 'Fundamentos HTTP',
+      text: 'Cómo modelar requests/responses con métodos, status codes, headers y JSON de forma clara y consistente.',
+    },
+    {
+      badge: 'NIVEL 2',
+      title: 'APIs robustas',
+      text: 'Autenticación, resiliencia y operación: OAuth, rate limiting, idempotencia, webhooks y versionamiento sin romper clientes.',
+    },
+    {
+      badge: 'NIVEL 3',
+      title: 'Diseño senior',
+      text: 'Diseño profesional y arquitectura: patrones, seguridad, performance, contratos (OpenAPI) y sistemas distribuidos.',
+    },
+  ]
+
   return (
     <div className="print-certificate min-h-screen bg-zinc-950">
       <Container className="py-10">
@@ -209,10 +227,13 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
               </div>
               <div className="mt-1 text-xs text-zinc-500">Imprimir → Guardar como PDF</div>
             </div>
-            <div className="certificate-page bg-zinc-950/40 px-6 py-8 sm:px-10 sm:py-10">
-              <div className="certificate-sheet relative mx-auto overflow-hidden rounded-[28px] border border-zinc-200 bg-zinc-50 p-8 shadow-[0_20px_80px_rgba(0,0,0,0.35)] sm:p-10">
-                <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-indigo-300/40 blur-3xl" />
-                <div className="pointer-events-none absolute -bottom-28 -left-28 h-72 w-72 rounded-full bg-emerald-300/40 blur-3xl" />
+            <div className="certificate-page relative overflow-hidden px-6 py-8 sm:px-10 sm:py-10">
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-indigo-500/25 via-sky-400/20 to-emerald-500/25" />
+              <div className="pointer-events-none absolute -right-28 -top-28 h-96 w-96 rounded-full bg-indigo-500/25 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-36 -left-36 h-[28rem] w-[28rem] rounded-full bg-emerald-500/20 blur-3xl" />
+              <div className="pointer-events-none absolute inset-0 opacity-70 mix-blend-overlay [background:radial-gradient(60rem_60rem_at_20%_10%,rgba(255,255,255,0.28),transparent_55%),radial-gradient(50rem_50rem_at_80%_90%,rgba(255,255,255,0.22),transparent_55%)]" />
+
+              <div className="certificate-sheet relative mx-auto overflow-hidden rounded-[28px] border border-zinc-200 bg-white/90 p-8 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur sm:p-10">
                 <div className="pointer-events-none absolute inset-3 rounded-[22px] border border-zinc-200" />
 
                 <div className="relative">
@@ -257,7 +278,20 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
                     ))}
                   </div>
 
-                  <div className="mt-10 grid gap-6 border-t border-zinc-200 pt-6 sm:grid-cols-2">
+                  <div className="mt-8 rounded-2xl border border-zinc-200 bg-white px-6 py-5">
+                    <div className="text-[11px] font-bold tracking-[0.22em] text-zinc-600">LO MÁS IMPORTANTE QUE APRENDIÓ</div>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                      {keyLearnings.map((k) => (
+                        <div key={k.badge} className="rounded-2xl border border-zinc-200 bg-zinc-50/60 px-4 py-4">
+                          <div className="text-[11px] font-bold tracking-widest text-zinc-600">{k.badge}</div>
+                          <div className="mt-1 text-sm font-extrabold text-zinc-900">{k.title}</div>
+                          <div className="mt-2 text-xs leading-relaxed text-zinc-700">{k.text}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-8 grid gap-6 border-t border-zinc-200 pt-6 sm:grid-cols-2">
                     <div>
                       <div className="text-xs text-zinc-600">Fecha</div>
                       <div className="mt-1 text-sm font-bold text-zinc-900">{formatDate(certificate?.issuedAt ?? Date.now())}</div>
@@ -272,6 +306,13 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
                         <div className="h-px w-56 bg-zinc-300" />
                         <div className="text-xs font-bold text-zinc-700">Dirección Académica</div>
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 rounded-2xl border border-zinc-200 bg-white px-5 py-4">
+                    <div className="text-[11px] font-bold tracking-[0.22em] text-zinc-600">REFLEXIÓN</div>
+                    <div className="mt-2 text-sm leading-relaxed text-zinc-800">
+                      “La mejor API no es la más compleja: es la más clara, segura y fácil de evolucionar.”
                     </div>
                   </div>
 
