@@ -28,91 +28,101 @@ function CertificateContent({ certificate, displayName, progress, levels, keyLea
     return `${window.location.origin}/?verify=${certificate.id}`
   })()
   return (
-    <div className="certificate-inner p-7 sm:p-9">
-      <div className="flex flex-wrap items-start justify-between gap-6">
-        <BrandMark tone="onColor" subtitle="Eficiencia operativa con automatización e IA" />
-        <div className="text-right">
-          <div className="text-[11px] font-bold tracking-[0.22em] text-zinc-100/80">CERTIFICADO</div>
-          <div className="mt-1 text-sm font-extrabold text-zinc-100">API Academy</div>
-          <div className="mt-1 text-xs text-zinc-100/70">
-            ID:{' '}
-            <span className="font-mono font-bold text-zinc-100">
-              {certificate?.id ?? '—'}
-            </span>
-          </div>
+    <div className="certificate-inner h-full p-7 sm:p-9">
+      <div className="relative h-full overflow-hidden rounded-[26px] bg-[#f8f4e8] ring-1 ring-amber-200/70 shadow-[0_25px_90px_rgba(0,0,0,0.25)]">
+        <div className="pointer-events-none absolute inset-0 opacity-40 [background:radial-gradient(900px_420px_at_20%_0%,rgba(180,132,44,0.20),transparent_55%),radial-gradient(700px_380px_at_100%_100%,rgba(120,53,15,0.12),transparent_55%)]" />
+        <div className="pointer-events-none absolute -left-24 top-20 rotate-[-12deg] text-[84px] font-black tracking-tight text-amber-900/5 sm:text-[110px]">
+          API
         </div>
-      </div>
+        <div className="pointer-events-none absolute -right-16 top-44 rotate-[12deg] text-[72px] font-black tracking-tight text-amber-900/5 sm:text-[96px]">
+          Academy
+        </div>
 
-      <div className="mt-8 text-center">
-        <div className="text-[11px] font-bold tracking-[0.30em] text-zinc-100/80">CERTIFICADO DE FINALIZACIÓN</div>
-        <div className="mx-auto mt-4 h-px w-48 bg-gradient-to-r from-transparent via-white/70 to-transparent" />
-        <div className="mt-6 text-sm text-zinc-100/90">Se certifica que</div>
-        <div className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">
-          {finalName}
-        </div>
-        <div className="mt-3 text-sm leading-relaxed text-zinc-100/85">
-          completó satisfactoriamente el programa de aprendizaje de APIs y arquitectura, con evaluación por nivel.
-        </div>
-      </div>
-
-      <div className="mt-7 grid gap-3 sm:grid-cols-3">
-        {levels.map((l) => (
-          <div key={l.hash} className="rounded-2xl bg-white/10 px-5 py-4 ring-1 ring-white/20">
-            <div className="text-[11px] font-bold tracking-widest text-white/80">{l.badge}</div>
-            <div className="mt-1 text-sm font-extrabold text-white">{l.title}</div>
-            <div className="mt-2 text-xs text-white/80">
-              Best quiz:{' '}
-              <span className="font-bold text-white">
-                {certificate?.scores?.[l.hash]?.bestPct ?? progress?.[l.hash]?.quiz?.bestPct ?? 0}%
-              </span>
+        <div className="relative flex h-full flex-col p-8 sm:p-10">
+          <div className="flex items-start justify-between gap-6">
+            <BrandMark tone="light" subtitle="Eficiencia operativa con automatización e IA" />
+            <div className="text-right">
+              <div className="text-[11px] font-bold tracking-[0.26em] text-zinc-500">CERTIFICADO</div>
+              <div className="mt-1 text-sm font-extrabold text-zinc-900">API Academy</div>
+              <div className="mt-1 text-[11px] text-zinc-500">
+                ID <span className="font-mono font-bold text-zinc-800">{certificate?.id ?? '—'}</span>
+              </div>
             </div>
           </div>
-        ))}
-      </div>
 
-      <div className="mt-6 rounded-2xl bg-white/10 px-6 py-5 ring-1 ring-white/20">
-        <div className="text-[11px] font-bold tracking-[0.22em] text-white/80">LO MÁS IMPORTANTE QUE APRENDIÓ</div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          {keyLearnings.map((k) => (
-            <div key={k.badge} className="rounded-2xl bg-black/10 px-4 py-4 ring-1 ring-white/15">
-              <div className="text-[11px] font-bold tracking-widest text-white/80">{k.badge}</div>
-              <div className="mt-1 text-sm font-extrabold text-white">{k.title}</div>
-              <div className="mt-2 text-xs leading-relaxed text-white/85">{k.text}</div>
+          <div className="mt-10 text-center">
+            <div className="text-[11px] font-bold tracking-[0.34em] text-zinc-500">CERTIFICADO DE FINALIZACIÓN</div>
+            <div className="mx-auto mt-4 h-px w-44 bg-gradient-to-r from-transparent via-amber-500 to-transparent" />
+            <div className="mt-6 text-sm text-zinc-600">Se certifica que</div>
+            <div className="mt-3 font-serif text-4xl font-bold tracking-tight text-zinc-950 sm:text-5xl">{finalName}</div>
+            <div className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-zinc-600">
+              completó satisfactoriamente el programa de aprendizaje de APIs y arquitectura, con evaluación por nivel.
             </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-6 grid gap-6 border-t border-white/25 pt-5 sm:grid-cols-2">
-        <div>
-          <div className="text-xs text-white/80">Fecha</div>
-          <div className="mt-1 text-sm font-bold text-white">{formatDate(certificate?.issuedAt ?? Date.now())}</div>
-          <div className="mt-4 max-w-sm text-[11px] text-white/80">
-            Verificación: <span className="font-mono">{verifyUrl || '—'}</span>
+            <div className="mx-auto mt-6 grid h-14 w-14 place-items-center rounded-full border-2 border-amber-500/60 bg-amber-50 text-[10px] font-bold tracking-widest text-amber-700 shadow-sm">
+              AI
+            </div>
           </div>
-        </div>
-        <div className="sm:text-right">
-          <div className="text-xs text-white/80">Emite</div>
-          <div className="mt-1 text-sm font-extrabold text-white">Whitelabel AI</div>
-          <div className="mt-4 flex flex-col items-start gap-2 sm:items-end">
-            <div className="h-px w-56 bg-white/45" />
-            <div className="text-xs font-bold text-white/85">Dirección Académica</div>
+
+          <div className="mt-9 grid gap-3 sm:grid-cols-3">
+            {levels.map((l) => (
+              <div key={l.hash} className="rounded-2xl border border-zinc-200 bg-white px-5 py-4">
+                <div className="text-[11px] font-bold tracking-widest text-zinc-500">{l.badge}</div>
+                <div className="mt-1 text-sm font-extrabold text-zinc-950">{l.title}</div>
+                <div className="mt-2 text-xs text-zinc-600">
+                  Best quiz:{' '}
+                  <span className="font-bold text-zinc-950">
+                    {certificate?.scores?.[l.hash]?.bestPct ?? progress?.[l.hash]?.quiz?.bestPct ?? 0}%
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
+
+          <div className="mt-6 rounded-2xl border border-zinc-200 bg-white px-6 py-5">
+            <div className="text-[11px] font-bold tracking-[0.24em] text-zinc-500">LO MÁS IMPORTANTE QUE APRENDIÓ</div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              {keyLearnings.map((k) => (
+                <div key={k.badge} className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4">
+                  <div className="text-[11px] font-bold tracking-widest text-zinc-500">{k.badge}</div>
+                  <div className="mt-1 text-sm font-extrabold text-zinc-950">{k.title}</div>
+                  <div className="mt-2 text-xs leading-relaxed text-zinc-600">{k.text}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-6 border-t border-zinc-200 pt-6 sm:grid-cols-2">
+            <div>
+              <div className="text-xs text-zinc-500">Fecha</div>
+              <div className="mt-1 text-sm font-bold text-zinc-950">{formatDate(certificate?.issuedAt ?? Date.now())}</div>
+              <div className="mt-3 text-[11px] text-zinc-500">
+                Verificación: <span className="font-mono text-zinc-700">{verifyUrl || '—'}</span>
+              </div>
+            </div>
+            <div className="sm:text-right">
+              <div className="text-xs text-zinc-500">Emite</div>
+              <div className="mt-1 text-sm font-extrabold text-zinc-950">Whitelabel AI</div>
+              <div className="mt-4 flex flex-col items-start gap-2 sm:items-end">
+                <div className="h-px w-56 bg-zinc-300" />
+                <div className="text-xs font-bold text-zinc-700">Dirección Académica</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-zinc-200 bg-zinc-50 px-5 py-4">
+            <div className="text-[11px] font-bold tracking-[0.24em] text-zinc-500">REFLEXIÓN</div>
+            <div className="mt-2 text-sm leading-relaxed text-zinc-700">
+              “La mejor API no es la más compleja: es la más clara, segura y fácil de evolucionar.”
+            </div>
+          </div>
+
+          {certificate?.signature && (
+            <div className="mt-5 text-[11px] text-zinc-500">
+              Firma: <span className="font-mono text-zinc-700">{certificate.signature.slice(0, 28)}…</span>
+            </div>
+          )}
         </div>
       </div>
-
-      <div className="mt-5 rounded-2xl bg-white/10 px-5 py-4 ring-1 ring-white/20">
-        <div className="text-[11px] font-bold tracking-[0.22em] text-white/80">REFLEXIÓN</div>
-        <div className="mt-2 text-sm leading-relaxed text-white/90">
-          “La mejor API no es la más compleja: es la más clara, segura y fácil de evolucionar.”
-        </div>
-      </div>
-
-      {certificate?.signature && (
-        <div className="mt-5 text-[11px] text-white/75">
-          Firma: <span className="font-mono">{certificate.signature.slice(0, 28)}…</span>
-        </div>
-      )}
     </div>
   )
 }
