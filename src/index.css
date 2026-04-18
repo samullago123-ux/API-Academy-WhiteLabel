@@ -213,8 +213,7 @@
   background-color: #f8f4e8;
   background-image:
     radial-gradient(900px 520px at 10% 0%, rgba(255, 255, 255, 0.55), transparent 60%),
-    radial-gradient(900px 520px at 100% 100%, rgba(120, 53, 15, 0.06), transparent 60%),
-    repeating-linear-gradient(22deg, rgba(120, 53, 15, 0.04) 0px, rgba(120, 53, 15, 0.04) 1px, transparent 1px, transparent 28px);
+    radial-gradient(900px 520px at 100% 100%, rgba(120, 53, 15, 0.06), transparent 60%);
   box-shadow: inset 0 0 0 1px rgba(161, 98, 7, 0.14);
 }
 
@@ -223,10 +222,8 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.18;
+  opacity: 0.12;
   mix-blend-mode: multiply;
   background-image:
-    repeating-radial-gradient(circle at 52% 42%, rgba(184, 134, 11, 0.10) 0 1px, transparent 1px 10px),
-    repeating-conic-gradient(from 0deg at 52% 42%, rgba(184, 134, 11, 0.06) 0 7deg, transparent 7deg 14deg),
-    radial-gradient(900px 520px at 50% 40%, transparent 0 55%, rgba(0, 0, 0, 0.05) 56%, transparent 58%);
+    radial-gradient(800px 480px at 50% 35%, transparent 0 60%, rgba(0, 0, 0, 0.06) 61%, transparent 63%);
 }
