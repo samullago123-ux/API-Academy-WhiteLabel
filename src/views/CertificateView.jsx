@@ -75,7 +75,7 @@ function CertificateContent({ certificate, displayName, progress, levels, prefer
             </div>
 
             <div className="flex min-h-[17%] flex-col items-center justify-end">
-              <div className="flex items-end justify-center gap-[200px]">
+              <div className="flex w-full flex-wrap items-center justify-center gap-10 sm:gap-[200px]">
                 <div className="w-[160px] text-center">
                   <div className="mx-auto h-px w-[120px] bg-[#1A1A2E]" />
                   <div className="mt-2 text-[10px] text-[#666666]">Fecha de emisión</div>
