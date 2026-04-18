@@ -22,50 +22,72 @@ function formatDate(ts) {
 function CertificateContent({ certificate, displayName, progress, levels, preferDraftName = false }) {
   const draftName = displayName.trim()
   const finalName = preferDraftName ? (draftName || certificate?.displayName || '—') : (certificate?.displayName || draftName || '—')
+
   const verifyUrl = (() => {
     if (!certificate?.id) return ''
     if (typeof window === 'undefined') return `?verify=${certificate.id}`
     return `${window.location.origin}/?verify=${certificate.id}`
   })()
+
   return (
-    <div className="certificate-inner h-full p-4">
-      <div className="h-full border-2 border-[#1A1A2E] bg-[#FFFDF7] p-2">
-        <div className="h-full border border-[#C9A84C] p-6">
-          <div className="mx-auto flex h-full w-full max-w-[900px] flex-col justify-between text-center">
-            <div className="flex min-h-[15%] flex-col items-center justify-center">
-              <div className="grid h-10 w-10 place-items-center rounded-full border-2 border-[#C9A84C] bg-[#1A1A2E] text-[10px] font-bold tracking-wider text-[#C9A84C]">
-                WL
+    <div className="certificate-inner">
+      <div className="cert-border-outer">
+        <div className="cert-border-inner">
+          <div className="cert-corner cert-corner-tl" />
+          <div className="cert-corner cert-corner-tr" />
+          <div className="cert-corner cert-corner-bl" />
+          <div className="cert-corner cert-corner-br" />
+
+          <div className="cert-content">
+            <div className="cert-section cert-header">
+              <div className="cert-logo">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                  <circle cx="20" cy="20" r="19" stroke="#C9A84C" strokeWidth="2" fill="#1A1A2E" />
+                  <text
+                    x="20"
+                    y="24"
+                    textAnchor="middle"
+                    fill="#C9A84C"
+                    fontSize="13"
+                    fontWeight="700"
+                    fontFamily="Inter, sans-serif"
+                  >
+                    WL
+                  </text>
+                </svg>
               </div>
-              <div className="mt-2 text-[11px] font-semibold uppercase tracking-[4px] text-[#1A1A2E]">WHITELABEL AI ACADEMY</div>
-              <div className="mt-3 h-[2px] w-[60px] bg-[#C9A84C]" />
+              <div className="cert-academy-name">WHITELABEL AI ACADEMY</div>
+              <div className="cert-gold-line" />
             </div>
 
-            <div className="flex min-h-[15%] flex-col items-center justify-center">
-              <div className="text-[36px] font-bold uppercase leading-none tracking-[6px] text-[#1A1A2E]">CERTIFICATE</div>
-              <div className="mt-1 text-[14px] font-normal uppercase tracking-[4px] text-[#666666]">OF COMPLETION</div>
+            <div className="cert-section cert-title-block">
+              <h1 className="cert-title">CERTIFICATE</h1>
+              <div className="cert-subtitle">OF COMPLETION</div>
             </div>
 
-            <div className="flex min-h-[20%] flex-col items-center justify-center">
-              <div className="text-[12px] italic text-[#666666]">This certifies that</div>
-              <div className="mt-2 text-[32px] font-bold leading-tight text-[#1A1A2E]">{finalName}</div>
-              <div className="mt-2 h-px w-[200px] bg-[#C9A84C]" />
+            <div className="cert-section cert-recipient">
+              <div className="cert-certifies">This certifies that</div>
+              <div className="cert-name">{finalName}</div>
+              <div className="cert-name-underline" />
             </div>
 
-            <div className="flex min-h-[12%] flex-col items-center justify-center">
-              <div className="max-w-[500px] text-[13px] leading-[1.6] text-[#666666]">
-                completó satisfactoriamente el programa de aprendizaje de APIs y arquitectura, con evaluación por nivel.
-              </div>
+            <div className="cert-section cert-description">
+              <p>
+                completó satisfactoriamente el programa de aprendizaje
+                de APIs y arquitectura, con evaluación por nivel.
+              </p>
             </div>
 
-            <div className="flex min-h-[16%] flex-col items-center justify-center">
-              <div className="flex flex-wrap items-center justify-center gap-4">
+            <div className="cert-section cert-levels">
+              <div className="cert-levels-row">
                 {levels.map((l, idx) => {
                   const score = certificate?.scores?.[l.hash]?.bestPct ?? progress?.[l.hash]?.quiz?.bestPct ?? 0
+                  const passed = score > 0
                   return (
-                    <div key={l.hash} className="h-[80px] w-[150px] rounded-lg border border-[#E0E0E0] bg-white px-3 py-2 text-center">
-                      <div className="text-[10px] uppercase tracking-[2px] text-[#666666]">NIVEL {idx + 1}</div>
-                      <div className="mt-1 text-[14px] font-semibold text-[#1A1A2E]">{l.title}</div>
-                      <div className="mt-1 text-[12px]" style={{ color: score > 0 ? '#C9A84C' : '#CCCCCC' }}>
+                    <div key={l.hash} className={`cert-level-card ${passed ? 'cert-level-passed' : ''}`}>
+                      <div className="cert-level-label">NIVEL {idx + 1}</div>
+                      <div className="cert-level-title">{l.title}</div>
+                      <div className="cert-level-score" style={{ color: passed ? '#C9A84C' : '#BBBBBB' }}>
                         Score: {score}%
                       </div>
                     </div>
@@ -74,22 +96,59 @@ function CertificateContent({ certificate, displayName, progress, levels, prefer
               </div>
             </div>
 
-            <div className="flex min-h-[17%] flex-col items-center justify-end">
-              <div className="flex w-full flex-wrap items-center justify-center gap-10 sm:gap-[200px]">
-                <div className="w-[160px] text-center">
-                  <div className="mx-auto h-px w-[120px] bg-[#1A1A2E]" />
-                  <div className="mt-2 text-[10px] text-[#666666]">Fecha de emisión</div>
-                  <div className="mt-1 text-[12px] font-semibold text-[#1A1A2E]">{formatDate(certificate?.issuedAt ?? Date.now())}</div>
+            <div className="cert-section cert-footer">
+              <div className="cert-footer-columns">
+                <div className="cert-footer-col">
+                  <div className="cert-footer-line" />
+                  <div className="cert-footer-label">Fecha de emisión</div>
+                  <div className="cert-footer-value">
+                    {certificate?.issuedAt
+                      ? new Date(certificate.issuedAt).toLocaleDateString('es-ES')
+                      : new Date().toLocaleDateString('es-ES')}
+                  </div>
                 </div>
-                <div className="w-[160px] text-center">
-                  <div className="mx-auto h-px w-[120px] bg-[#1A1A2E]" />
-                  <div className="mt-2 text-[10px] text-[#666666]">ID Certificado</div>
-                  <div className="mt-1 truncate text-[12px] font-semibold text-[#1A1A2E]">{certificate?.id ?? '—'}</div>
+                <div className="cert-footer-seal">
+                  <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                    <circle cx="24" cy="24" r="22" stroke="#C9A84C" strokeWidth="1.5" fill="none" />
+                    <circle cx="24" cy="24" r="18" stroke="#C9A84C" strokeWidth="0.5" fill="none" />
+                    <text
+                      x="24"
+                      y="21"
+                      textAnchor="middle"
+                      fill="#C9A84C"
+                      fontSize="7"
+                      fontWeight="700"
+                      fontFamily="Inter, sans-serif"
+                    >
+                      VERIFIED
+                    </text>
+                    <text
+                      x="24"
+                      y="30"
+                      textAnchor="middle"
+                      fill="#1A1A2E"
+                      fontSize="5"
+                      fontFamily="Inter, sans-serif"
+                    >
+                      WHITELABEL
+                    </text>
+                  </svg>
+                </div>
+                <div className="cert-footer-col">
+                  <div className="cert-footer-line" />
+                  <div className="cert-footer-label">ID Certificado</div>
+                  <div className="cert-footer-value cert-footer-id">
+                    {certificate?.id ?? '—'}
+                  </div>
                 </div>
               </div>
-              <div className="mt-4 text-[10px] text-[#666666]">Verificación: {verifyUrl || '—'}</div>
-              {certificate?.signature && <div className="mt-1 text-[10px] text-[#666666]">Firma: {certificate.signature.slice(0, 18)}…</div>}
-              <div className="mt-3 text-[10px] text-[#666666]">whitelabel.ai</div>
+              {verifyUrl && (
+                <div className="cert-verify-url">Verificación: {verifyUrl}</div>
+              )}
+              {certificate?.signature && (
+                <div className="cert-signature">Firma: {certificate.signature.slice(0, 18)}…</div>
+              )}
+              <div className="cert-brand">whitelabel.ai</div>
             </div>
           </div>
         </div>
