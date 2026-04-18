@@ -500,10 +500,9 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
               </div>
               <div className="mt-1 text-xs text-zinc-500">Imprimir → Guardar como PDF</div>
             </div>
-            <div className="certificate-preview-only certificate-page">
-              <div className="certificate-preview-frame cert-frame">
-
-                <div className="certificate-preview-canvas">
+            <div className="no-print certificate-page">
+              <div className="certificate-screen-frame cert-frame">
+                <div className="certificate-screen-canvas">
                   <CertificateContent
                     certificate={certificate}
                     displayName={displayName}
