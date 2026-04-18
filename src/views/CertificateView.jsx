@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Badge, BrandMark, Button, Card, Container } from '../components/ui.jsx'
+import { Badge, Button, Card, Container } from '../components/ui.jsx'
 import { trackEvent } from '../services/analytics.js'
 import { issueCertificate, isCertificateEligible, loadCertificate, saveCertificate } from '../services/certificateStore.js'
 import { loadProfile, saveProfile } from '../services/profileStore.js'
@@ -19,7 +19,7 @@ function formatDate(ts) {
   }
 }
 
-function CertificateContent({ certificate, displayName, progress, levels, keyLearnings, preferDraftName = false }) {
+function CertificateContent({ certificate, displayName, progress, levels, preferDraftName = false }) {
   const draftName = displayName.trim()
   const finalName = preferDraftName ? (draftName || certificate?.displayName || '—') : (certificate?.displayName || draftName || '—')
   const verifyUrl = (() => {
@@ -28,86 +28,69 @@ function CertificateContent({ certificate, displayName, progress, levels, keyLea
     return `${window.location.origin}/?verify=${certificate.id}`
   })()
   return (
-    <div className="certificate-inner h-full p-6 sm:p-8">
-      <div className="cert-paper-outer h-full">
-        <div className="cert-paper-inner relative h-full">
-          <div className="pointer-events-none absolute inset-4 rounded-[20px] border border-amber-300/50" />
-          <div className="pointer-events-none absolute inset-7 rounded-[16px] border border-amber-400/25" />
-          <div className="pointer-events-none absolute left-0 top-0 h-20 w-20 border-l-[8px] border-t-[8px] border-amber-500/70" />
-          <div className="pointer-events-none absolute right-0 top-0 h-20 w-20 border-r-[8px] border-t-[8px] border-amber-500/70" />
-
-          <div className="relative flex h-full flex-col p-7 sm:p-9">
-            <div className="flex items-center justify-between">
-              <BrandMark tone="light" subtitle="Eficiencia operativa con automatización e IA" />
-              <div className="text-right">
-                <div className="text-[10px] font-bold tracking-[0.26em] text-zinc-500">ID CERTIFICADO</div>
-                <div className="mt-1 max-w-[180px] truncate font-mono text-[11px] font-bold text-zinc-700 sm:max-w-[260px]">{certificate?.id ?? '—'}</div>
+    <div className="certificate-inner h-full p-4">
+      <div className="h-full border-2 border-[#1A1A2E] bg-[#FFFDF7] p-2">
+        <div className="h-full border border-[#C9A84C] p-6">
+          <div className="mx-auto flex h-full w-full max-w-[900px] flex-col justify-between text-center">
+            <div className="flex min-h-[15%] flex-col items-center justify-center">
+              <div className="grid h-10 w-10 place-items-center rounded-sm border border-[#1A1A2E] bg-white text-xs font-bold text-[#1A1A2E]">
+                WL
               </div>
+              <div className="mt-2 text-[11px] font-semibold uppercase tracking-[4px] text-[#1A1A2E]">WHITELABEL AI ACADEMY</div>
+              <div className="mt-3 h-[2px] w-[60px] bg-[#C9A84C]" />
             </div>
 
-            <div className="mt-8 text-center">
-              <div className="text-sm font-black tracking-[0.22em] text-zinc-700">CERTIFICATE</div>
-              <div className="text-[11px] font-bold tracking-[0.26em] text-zinc-500">OF COMPLETION</div>
-              <div className="mx-auto mt-3 h-px w-48 bg-gradient-to-r from-transparent via-amber-500 to-transparent" />
-              <div className="mt-5 text-sm text-zinc-600">This certifies that</div>
-              <div className="mt-2 font-serif text-4xl font-bold tracking-tight text-zinc-950 sm:text-5xl">{finalName}</div>
-              <div className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-zinc-600">
+            <div className="flex min-h-[15%] flex-col items-center justify-center">
+              <div className="text-[36px] font-bold uppercase leading-none tracking-[6px] text-[#1A1A2E]">CERTIFICATE</div>
+              <div className="mt-1 text-[14px] font-normal uppercase tracking-[4px] text-[#666666]">OF COMPLETION</div>
+            </div>
+
+            <div className="flex min-h-[20%] flex-col items-center justify-center">
+              <div className="text-[12px] italic text-[#666666]">This certifies that</div>
+              <div className="mt-2 text-[32px] font-bold leading-tight text-[#1A1A2E]">{finalName}</div>
+              <div className="mt-2 h-px w-[200px] bg-[#C9A84C]" />
+            </div>
+
+            <div className="flex min-h-[12%] flex-col items-center justify-center">
+              <div className="max-w-[500px] text-[13px] leading-[1.6] text-[#666666]">
                 completó satisfactoriamente el programa de aprendizaje de APIs y arquitectura, con evaluación por nivel.
               </div>
             </div>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              {levels.map((l) => (
-                <div key={l.hash} className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-center">
-                  <div className="text-[10px] font-bold tracking-[0.2em] text-zinc-500">{l.badge}</div>
-                  <div className="mt-1 text-sm font-extrabold text-zinc-950">{l.title}</div>
-                  <div className="mt-1 text-xs text-zinc-600">
-                    Score:{' '}
-                    <span className="font-bold text-zinc-900">
-                      {certificate?.scores?.[l.hash]?.bestPct ?? progress?.[l.hash]?.quiz?.bestPct ?? 0}%
-                    </span>
-                  </div>
+            <div className="flex min-h-[16%] flex-col items-center justify-center">
+              <div className="flex flex-wrap items-center justify-center gap-4">
+                {levels.map((l, idx) => {
+                  const score = certificate?.scores?.[l.hash]?.bestPct ?? progress?.[l.hash]?.quiz?.bestPct ?? 0
+                  return (
+                    <div key={l.hash} className="h-[80px] w-[150px] border border-[#E0E0E0] bg-white px-3 py-2 text-center">
+                      <div className="text-[10px] uppercase tracking-[2px] text-[#666666]">NIVEL {idx + 1}</div>
+                      <div className="mt-1 text-[14px] font-semibold text-[#1A1A2E]">{l.title}</div>
+                      <div className="mt-1 text-[12px]" style={{ color: score > 0 ? '#C9A84C' : '#CCCCCC' }}>
+                        Score: {score}%
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="flex min-h-[17%] flex-col items-center justify-end">
+              <div className="flex items-end justify-center gap-[200px]">
+                <div className="w-[160px] text-center">
+                  <div className="mx-auto h-px w-[120px] bg-[#1A1A2E]" />
+                  <div className="mt-2 text-[10px] text-[#666666]">Fecha de emisión</div>
+                  <div className="mt-1 text-[12px] font-semibold text-[#1A1A2E]">{formatDate(certificate?.issuedAt ?? Date.now())}</div>
                 </div>
-              ))}
-            </div>
-
-            <div className="mt-4 rounded-xl border border-zinc-200 bg-white px-5 py-3">
-              <div className="text-[10px] font-bold tracking-[0.24em] text-zinc-500">KEY LEARNINGS</div>
-              <div className="mt-2 grid gap-2 text-xs text-zinc-700 sm:grid-cols-3">
-                {keyLearnings.map((k) => (
-                  <div key={k.badge} className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
-                    <span className="font-bold text-zinc-900">{k.title}:</span> {k.text}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-5 grid gap-6 border-t border-zinc-200 pt-4 sm:grid-cols-3">
-              <div>
-                <div className="text-[10px] font-bold tracking-[0.2em] text-zinc-500">DATE</div>
-                <div className="mt-1 text-sm font-bold text-zinc-950">{formatDate(certificate?.issuedAt ?? Date.now())}</div>
-              </div>
-              <div className="text-center">
-                <div className="mx-auto grid h-12 w-12 place-items-center rounded-full border-2 border-amber-500/70 bg-amber-50 text-[10px] font-black tracking-widest text-amber-800 shadow-sm">
-                  AWARD
+                <div className="w-[160px] text-center">
+                  <div className="mx-auto h-px w-[120px] bg-[#1A1A2E]" />
+                  <div className="mt-2 text-[10px] text-[#666666]">ID Certificado</div>
+                  <div className="mt-1 truncate text-[12px] font-semibold text-[#1A1A2E]">{certificate?.id ?? '—'}</div>
                 </div>
               </div>
-              <div className="sm:text-right">
-                <div className="text-[10px] font-bold tracking-[0.2em] text-zinc-500">ISSUED BY</div>
-                <div className="mt-1 text-sm font-extrabold text-zinc-950">Whitelabel AI</div>
-                <div className="text-xs text-zinc-600">Dirección Académica</div>
-              </div>
+              <div className="mt-4 text-[10px] text-[#666666]">Verificación: {verifyUrl || '—'}</div>
+              {certificate?.signature && <div className="mt-1 text-[10px] text-[#666666]">Firma: {certificate.signature.slice(0, 18)}…</div>}
+              <div className="mt-3 text-[10px] text-[#666666]">whitelabel.ai</div>
             </div>
-
-            <div className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2 text-[11px] text-zinc-600">
-              Verificación: <span className="font-mono text-zinc-700">{verifyUrl || '—'}</span>
-            </div>
-
-            {certificate?.signature && (
-              <div className="mt-2 text-[11px] text-zinc-500">
-                Firma: <span className="font-mono text-zinc-700">{certificate.signature.slice(0, 28)}…</span>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -284,24 +267,6 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
       setPublishing(false)
     }
   }
-
-  const keyLearnings = [
-    {
-      badge: 'NIVEL 1',
-      title: 'Fundamentos HTTP',
-      text: 'Métodos, status codes, headers y JSON bien estructurado.',
-    },
-    {
-      badge: 'NIVEL 2',
-      title: 'APIs robustas',
-      text: 'OAuth, rate limiting, idempotencia y versionamiento sin romper clientes.',
-    },
-    {
-      badge: 'NIVEL 3',
-      title: 'Diseño senior',
-      text: 'Seguridad, performance, contratos (OpenAPI) y sistemas distribuidos.',
-    },
-  ]
 
   return (
     <div className="print-certificate min-h-screen bg-zinc-950">
@@ -498,7 +463,6 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
                     displayName={displayName}
                     progress={progress}
                     levels={levels}
-                    keyLearnings={keyLearnings}
                     preferDraftName
                   />
                 </div>
@@ -513,7 +477,6 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
                     displayName={displayName}
                     progress={progress}
                     levels={levels}
-                    keyLearnings={keyLearnings}
                   />
                 </div>
               </div>
