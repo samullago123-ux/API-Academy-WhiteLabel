@@ -170,7 +170,16 @@
   max-width: 1056px;
   margin: 0 auto;
   aspect-ratio: 1056 / 748;
+  min-height: 748px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 1056px) {
+  .certificate-screen-frame {
+    aspect-ratio: auto;
+    min-height: 748px;
+    height: auto;
+  }
 }
 
 .certificate-screen-canvas {
