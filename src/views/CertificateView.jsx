@@ -28,14 +28,18 @@ function CertificateContent({ certificate, displayName, progress, levels, keyLea
     return `${window.location.origin}/?verify=${certificate.id}`
   })()
   return (
-    <div className="certificate-inner h-full p-7 sm:p-9">
+    <div className="certificate-inner h-full p-6 sm:p-8">
       <div className="cert-paper-outer h-full">
         <div className="cert-paper-inner relative h-full">
           <div className="pointer-events-none absolute inset-0 opacity-40 [background:radial-gradient(1100px_520px_at_10%_0%,rgba(184,134,11,0.18),transparent_60%),radial-gradient(900px_480px_at_100%_100%,rgba(120,53,15,0.10),transparent_60%)]" />
           <div className="pointer-events-none absolute inset-4 rounded-[20px] border border-amber-300/40" />
           <div className="pointer-events-none absolute inset-7 rounded-[16px] border border-amber-400/20" />
+          <div className="pointer-events-none absolute left-6 top-6 h-3 w-3 rounded-full border border-amber-400/50 bg-amber-200/20" />
+          <div className="pointer-events-none absolute right-6 top-6 h-3 w-3 rounded-full border border-amber-400/50 bg-amber-200/20" />
+          <div className="pointer-events-none absolute bottom-6 left-6 h-3 w-3 rounded-full border border-amber-400/50 bg-amber-200/20" />
+          <div className="pointer-events-none absolute bottom-6 right-6 h-3 w-3 rounded-full border border-amber-400/50 bg-amber-200/20" />
 
-          <div className="relative flex h-full flex-col p-8 sm:p-10">
+          <div className="relative flex h-full flex-col p-7 sm:p-9">
           <div className="flex items-start justify-between gap-6">
             <BrandMark tone="light" subtitle="Eficiencia operativa con automatización e IA" />
             <div className="text-right">
@@ -47,7 +51,7 @@ function CertificateContent({ certificate, displayName, progress, levels, keyLea
             </div>
           </div>
 
-          <div className="mt-10 text-center">
+          <div className="mt-8 text-center">
             <div className="text-[11px] font-bold tracking-[0.34em] text-zinc-500">CERTIFICADO DE FINALIZACIÓN</div>
             <div className="mx-auto mt-4 h-px w-44 bg-gradient-to-r from-transparent via-amber-500 to-transparent" />
             <div className="mt-6 text-sm text-zinc-600">Se certifica que</div>
@@ -55,14 +59,14 @@ function CertificateContent({ certificate, displayName, progress, levels, keyLea
             <div className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-zinc-600">
               completó satisfactoriamente el programa de aprendizaje de APIs y arquitectura, con evaluación por nivel.
             </div>
-            <div className="mx-auto mt-6 grid h-14 w-14 place-items-center rounded-full border-2 border-amber-500/70 bg-amber-50 text-[10px] font-black tracking-widest text-amber-800 shadow-sm">
+            <div className="mx-auto mt-5 grid h-12 w-12 place-items-center rounded-full border-2 border-amber-500/70 bg-amber-50 text-[10px] font-black tracking-widest text-amber-800 shadow-sm">
               SEAL
             </div>
           </div>
 
-          <div className="mt-9 grid gap-3 sm:grid-cols-3">
+          <div className="mt-7 grid gap-3 sm:grid-cols-3">
             {levels.map((l) => (
-              <div key={l.hash} className="rounded-2xl border border-zinc-200 bg-white px-5 py-4">
+              <div key={l.hash} className="rounded-2xl border border-zinc-200 bg-white px-5 py-3">
                 <div className="text-[11px] font-bold tracking-widest text-zinc-500">{l.badge}</div>
                 <div className="mt-1 text-sm font-extrabold text-zinc-950">{l.title}</div>
                 <div className="mt-2 text-xs text-zinc-600">
@@ -75,11 +79,11 @@ function CertificateContent({ certificate, displayName, progress, levels, keyLea
             ))}
           </div>
 
-          <div className="mt-6 rounded-2xl border border-zinc-200 bg-white px-6 py-5">
+          <div className="mt-5 rounded-2xl border border-zinc-200 bg-white px-6 py-4">
             <div className="text-[11px] font-bold tracking-[0.24em] text-zinc-500">LO MÁS IMPORTANTE QUE APRENDIÓ</div>
             <div className="mt-3 grid gap-3 sm:grid-cols-3">
               {keyLearnings.map((k) => (
-                <div key={k.badge} className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4">
+                <div key={k.badge} className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
                   <div className="text-[11px] font-bold tracking-widest text-zinc-500">{k.badge}</div>
                   <div className="mt-1 text-sm font-extrabold text-zinc-950">{k.title}</div>
                   <div className="mt-2 text-xs leading-relaxed text-zinc-600">{k.text}</div>
@@ -88,7 +92,7 @@ function CertificateContent({ certificate, displayName, progress, levels, keyLea
             </div>
           </div>
 
-          <div className="mt-6 grid gap-6 border-t border-zinc-200 pt-6 sm:grid-cols-2">
+          <div className="mt-5 grid gap-6 border-t border-zinc-200 pt-5 sm:grid-cols-2">
             <div>
               <div className="text-xs text-zinc-500">Fecha</div>
               <div className="mt-1 text-sm font-bold text-zinc-950">{formatDate(certificate?.issuedAt ?? Date.now())}</div>
@@ -106,7 +110,7 @@ function CertificateContent({ certificate, displayName, progress, levels, keyLea
             </div>
           </div>
 
-          <div className="mt-5 rounded-2xl border border-zinc-200 bg-zinc-50 px-5 py-4">
+          <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-5 py-4">
             <div className="text-[11px] font-bold tracking-[0.24em] text-zinc-500">REFLEXIÓN</div>
             <div className="mt-2 text-sm leading-relaxed text-zinc-700">
               “La mejor API no es la más compleja: es la más clara, segura y fácil de evolucionar.”
@@ -299,17 +303,17 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
     {
       badge: 'NIVEL 1',
       title: 'Fundamentos HTTP',
-      text: 'Cómo modelar requests/responses con métodos, status codes, headers y JSON de forma clara y consistente.',
+      text: 'Métodos, status codes, headers y JSON bien estructurado.',
     },
     {
       badge: 'NIVEL 2',
       title: 'APIs robustas',
-      text: 'Autenticación, resiliencia y operación: OAuth, rate limiting, idempotencia, webhooks y versionamiento sin romper clientes.',
+      text: 'OAuth, rate limiting, idempotencia y versionamiento sin romper clientes.',
     },
     {
       badge: 'NIVEL 3',
       title: 'Diseño senior',
-      text: 'Diseño profesional y arquitectura: patrones, seguridad, performance, contratos (OpenAPI) y sistemas distribuidos.',
+      text: 'Seguridad, performance, contratos (OpenAPI) y sistemas distribuidos.',
     },
   ]
 
