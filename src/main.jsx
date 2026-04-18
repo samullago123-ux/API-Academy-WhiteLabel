@@ -6,7 +6,10 @@ import { loadAllProgress, saveLabProgress } from './services/progressStore.js'
 import { aggregateMetrics, clearEvents, loadEvents, trackEvent } from './services/analytics.js'
 import { initTheme } from './theme/theme.js'
 import { supabase } from './services/supabaseClient.js'
-import { getSession, pullAllFromSupabase, pullEventsFromSupabase, pushAllToSupabase, signInWithEmailOtp, signOut } from './services/supabaseSync.js'
+import { loadCertificate } from './services/certificateStore.js'
+import { loadProfile } from './services/profileStore.js'
+import { getDeviceId } from './services/deviceId.js'
+import { syncDeviceEdge } from './services/edgeFunctions.js'
 
 initTheme()
 
@@ -124,10 +127,12 @@ function App() {
   const progress = loadAllProgress()
   const [searchQuery, setSearchQuery] = useState('')
   const [showMetrics, setShowMetrics] = useState(false)
-  const [sbEmail, setSbEmail] = useState('')
-  const [sbUser, setSbUser] = useState(null)
-  const [sbBusy, setSbBusy] = useState(false)
-  const [sbMsg, setSbMsg] = useState('')
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState('')
+  const [lastSyncAt, setLastSyncAt] = useState(() => {
+    if (typeof window === 'undefined') return 0
+    return Number(window.localStorage.getItem('api-academy:last-sync') ?? 0)
+  })
 
   const content = useMemo(() => {
     if (route.view === 'basics') return <APILearningLab />
@@ -153,18 +158,25 @@ function App() {
 
   useEffect(() => {
     if (!supabase) return
-    let unsub = null
-
-    getSession()
-      .then((s) => setSbUser(s?.user ?? null))
-      .catch(() => {})
-
-    const sub = supabase.auth.onAuthStateChange((_event, session) => {
-      setSbUser(session?.user ?? null)
-    })
-    unsub = () => sub.data.subscription.unsubscribe()
-
-    return () => unsub?.()
+    const id = window.setTimeout(() => {
+      const deviceId = getDeviceId()
+      const cert = loadCertificate()
+      const payload = {
+        deviceId,
+        profile: loadProfile(),
+        progress: loadAllProgress(),
+        certificateId: cert?.id ?? null,
+        events: loadEvents().slice(0, 500),
+      }
+      syncDeviceEdge(payload)
+        .then(() => {
+          const now = Date.now()
+          window.localStorage.setItem('api-academy:last-sync', String(now))
+          setLastSyncAt(now)
+        })
+        .catch(() => {})
+    }, 900)
+    return () => window.clearTimeout(id)
   }, [])
 
   useEffect(() => {
@@ -407,142 +419,60 @@ function App() {
             {showMetrics && (
               <div className="mt-4">
                 <Card className="p-5">
-                  <div className="mb-3 text-sm font-extrabold text-zinc-100">Supabase (cloud sync)</div>
+                  <div className="mb-3 text-sm font-extrabold text-zinc-100">Cloud Sync (automático)</div>
                   {!supabase ? (
                     <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-500">
-                      Falta configurar variables de entorno. En Vite podés usar <span className="font-mono">VITE_*</span> o también{' '}
-                      <span className="font-mono">NEXT_PUBLIC_*</span> (ya está habilitado).
+                      Falta configurar Supabase en el frontend (VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY).
                     </div>
                   ) : (
                     <div className="grid gap-3">
+                      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
+                        Se guarda sin pedir cuenta: usamos un <span className="font-mono">deviceId</span> local.
+                      </div>
                       <div className="grid gap-2 sm:grid-cols-2">
-                        <div>
-                          <div className="mb-2 text-xs font-bold tracking-widest text-zinc-500">EMAIL</div>
-                          <input
-                            value={sbEmail}
-                            onChange={(e) => setSbEmail(e.target.value)}
-                            placeholder="tu@email.com"
-                            className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
-                          />
+                        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+                          <div className="text-xs font-bold tracking-widest text-zinc-500">DEVICE</div>
+                          <div className="mt-2 font-mono text-xs text-zinc-300">{getDeviceId()}</div>
                         </div>
-                        <div>
-                          <div className="mb-2 text-xs font-bold tracking-widest text-zinc-500">ESTADO</div>
-                          <div className="flex h-10 items-center rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-300">
-                            {sbUser?.email ? `Conectado: ${sbUser.email}` : 'No conectado'}
+                        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+                          <div className="text-xs font-bold tracking-widest text-zinc-500">ÚLTIMA SYNC</div>
+                          <div className="mt-2 text-sm text-zinc-300">
+                            {lastSyncAt ? new Date(lastSyncAt).toLocaleString('es-ES') : 'nunca'}
                           </div>
                         </div>
                       </div>
-
-                      {sbMsg && <div className="text-sm text-zinc-500">{sbMsg}</div>}
-
                       <div className="flex flex-wrap gap-2">
-                        {!sbUser ? (
-                          <button
-                            disabled={sbBusy || !sbEmail.trim()}
-                            onClick={async () => {
-                              setSbBusy(true)
-                              setSbMsg('')
-                              try {
-                                await signInWithEmailOtp(sbEmail.trim())
-                                trackEvent('supabase_signin_otp')
-                                setSbMsg('Te envié un link al email. Abrilo para completar el login.')
-                              } catch (e) {
-                                setSbMsg(e?.message ?? 'No se pudo iniciar sesión.')
-                              } finally {
-                                setSbBusy(false)
-                              }
-                            }}
-                            className="inline-flex h-10 items-center justify-center rounded-xl bg-indigo-500 px-4 text-sm font-bold text-white transition-colors hover:bg-indigo-400 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
-                          >
-                            Conectar
-                          </button>
-                        ) : (
-                          <button
-                            disabled={sbBusy}
-                            onClick={async () => {
-                              setSbBusy(true)
-                              setSbMsg('')
-                              try {
-                                await signOut()
-                                trackEvent('supabase_signout')
-                                setSbMsg('Sesión cerrada.')
-                              } catch (e) {
-                                setSbMsg(e?.message ?? 'No se pudo cerrar sesión.')
-                              } finally {
-                                setSbBusy(false)
-                              }
-                            }}
-                            className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 px-4 text-sm font-bold text-zinc-200 transition-colors hover:bg-zinc-900 disabled:cursor-not-allowed"
-                          >
-                            Desconectar
-                          </button>
-                        )}
-
                         <button
-                          disabled={sbBusy || !sbUser}
+                          disabled={syncing}
                           onClick={async () => {
-                            setSbBusy(true)
-                            setSbMsg('')
+                            setSyncing(true)
+                            setSyncMsg('')
                             try {
-                              await pushAllToSupabase()
-                              trackEvent('supabase_push_all')
-                              setSbMsg('Subido: perfil + progreso + certificado + eventos.')
+                              const cert = loadCertificate()
+                              await syncDeviceEdge({
+                                deviceId: getDeviceId(),
+                                profile: loadProfile(),
+                                progress: loadAllProgress(),
+                                certificateId: cert?.id ?? null,
+                                events: loadEvents().slice(0, 500),
+                              })
+                              const now = Date.now()
+                              window.localStorage.setItem('api-academy:last-sync', String(now))
+                              setLastSyncAt(now)
+                              setSyncMsg('Sincronizado.')
+                              trackEvent('device_sync')
                             } catch (e) {
-                              setSbMsg(e?.message ?? 'No se pudo subir.')
+                              setSyncMsg(e?.message ?? 'No se pudo sincronizar.')
                             } finally {
-                              setSbBusy(false)
+                              setSyncing(false)
                             }
                           }}
-                          className="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-500 px-4 text-sm font-bold text-white transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
+                          className="inline-flex h-10 items-center justify-center rounded-xl bg-indigo-500 px-4 text-sm font-bold text-white transition-colors hover:bg-indigo-400 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
                         >
-                          Subir
-                        </button>
-
-                        <button
-                          disabled={sbBusy || !sbUser}
-                          onClick={async () => {
-                            setSbBusy(true)
-                            setSbMsg('')
-                            try {
-                              await pullAllFromSupabase()
-                              trackEvent('supabase_pull_all')
-                              setSbMsg('Descargado: perfil + progreso + certificado. Recargá la página para ver todo actualizado.')
-                            } catch (e) {
-                              setSbMsg(e?.message ?? 'No se pudo descargar.')
-                            } finally {
-                              setSbBusy(false)
-                            }
-                          }}
-                          className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 px-4 text-sm font-bold text-zinc-200 transition-colors hover:bg-zinc-900 disabled:cursor-not-allowed"
-                        >
-                          Descargar
-                        </button>
-
-                        <button
-                          disabled={sbBusy || !sbUser}
-                          onClick={async () => {
-                            setSbBusy(true)
-                            setSbMsg('')
-                            try {
-                              await pullEventsFromSupabase(500)
-                              trackEvent('supabase_pull_events')
-                              setSbMsg('Eventos descargados (máx 500).')
-                            } catch (e) {
-                              setSbMsg(e?.message ?? 'No se pudieron traer eventos.')
-                            } finally {
-                              setSbBusy(false)
-                            }
-                          }}
-                          className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 px-4 text-sm font-bold text-zinc-200 transition-colors hover:bg-zinc-900 disabled:cursor-not-allowed"
-                        >
-                          Traer eventos
+                          {syncing ? 'Sincronizando…' : 'Sincronizar ahora'}
                         </button>
                       </div>
-
-                      <div className="text-xs text-zinc-600">
-                        Tablas esperadas en Supabase: <span className="font-mono">profiles</span>, <span className="font-mono">progress</span>,{' '}
-                        <span className="font-mono">certificates</span>, <span className="font-mono">events</span>.
-                      </div>
+                      {syncMsg && <div className="text-sm text-zinc-500">{syncMsg}</div>}
                     </div>
                   )}
                 </Card>

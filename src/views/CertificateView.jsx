@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Badge, BrandMark, Button, Card, Container } from '../components/ui.jsx'
 import { trackEvent } from '../services/analytics.js'
-import { issueCertificate, isCertificateEligible, loadCertificate } from '../services/certificateStore.js'
+import { issueCertificate, isCertificateEligible, loadCertificate, saveCertificate } from '../services/certificateStore.js'
 import { loadProfile, saveProfile } from '../services/profileStore.js'
 import { supabase } from '../services/supabaseClient.js'
-import { getSession, pushAllToSupabase, verifyCertificatePublic } from '../services/supabaseSync.js'
-import { verifyCertificateEdge } from '../services/edgeFunctions.js'
+import { verifyCertificatePublic } from '../services/supabaseSync.js'
+import { issueCertificateEdge, syncDeviceEdge, verifyCertificateEdge } from '../services/edgeFunctions.js'
+import { loadEvents } from '../services/analytics.js'
+import { loadAllProgress } from '../services/progressStore.js'
+import { getDeviceId } from '../services/deviceId.js'
 
 function formatDate(ts) {
   if (!ts) return 'n/a'
@@ -180,6 +183,38 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
       const record = await issueCertificate({ displayName: name, progress, levels, public: makePublic })
       setCertificate(record)
       trackEvent('certificate_issued', { id: record.id })
+
+      if (supabase) {
+        const res = await issueCertificateEdge({
+          certificateId: record.id,
+          issuedAt: record.issuedAt,
+          displayName: record.displayName,
+          courseVersion: record.courseVersion,
+          scores: record.scores,
+          signature: record.signature,
+          public: record.public === true,
+        })
+        if (res?.ok !== true) throw new Error('No se pudo guardar el certificado en Supabase.')
+        setShareMsg('Certificado guardado en Supabase. El link ya es validable.')
+      } else {
+        setShareMsg('Supabase no está configurado. El certificado se guardó localmente.')
+      }
+
+      try {
+        if (supabase) {
+          const deviceId = getDeviceId()
+          const payload = {
+            deviceId,
+            profile: { displayName: loadProfile().displayName },
+            progress: loadAllProgress(),
+            certificateId: record.id,
+            events: loadEvents().slice(0, 500),
+          }
+          await syncDeviceEdge(payload)
+        }
+      } catch (e) {
+        trackEvent('device_sync_failed', { error: e?.message ?? 'unknown' })
+      }
     } finally {
       setIssuing(false)
     }
@@ -224,23 +259,29 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
   }
 
   async function publishToSupabase() {
+    if (!certificate?.id) return
     if (!supabase) {
-      setShareMsg('Supabase no está configurado en este entorno.')
+      setShareMsg('Supabase no está configurado.')
       return
     }
     setPublishing(true)
     setShareMsg('')
     try {
-      const session = await getSession()
-      if (!session?.user?.id) {
-        setShareMsg('Primero conectate a Supabase desde Home → Ver métricas → Supabase.')
-        return
-      }
-      await pushAllToSupabase()
-      setShareMsg('Publicado en Supabase. El link de verificación ya debería funcionar.')
+      const res = await issueCertificateEdge({
+        certificateId: certificate.id,
+        issuedAt: certificate.issuedAt,
+        displayName: certificate.displayName,
+        courseVersion: certificate.courseVersion,
+        scores: certificate.scores,
+        signature: certificate.signature,
+        public: certificate.public === true,
+      })
+      if (res?.ok !== true) throw new Error('No se pudo guardar el certificado en Supabase.')
+      saveCertificate(certificate)
+      setShareMsg('Certificado guardado en Supabase. El link ya es validable.')
       trackEvent('certificate_publish')
     } catch (e) {
-      setShareMsg(e?.message ?? 'No se pudo publicar en Supabase.')
+      setShareMsg(e?.message ?? 'No se pudo guardar en Supabase.')
     } finally {
       setPublishing(false)
     }
@@ -403,7 +444,7 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
                       Abrir
                     </Button>
                     <Button variant="ghost" onClick={publishToSupabase} disabled={publishing || !makePublic}>
-                      {publishing ? 'Publicando...' : 'Publicar en Supabase'}
+                      {publishing ? 'Guardando...' : 'Reintentar guardado'}
                     </Button>
                   </div>
                   {shareMsg && <div className="mt-3 text-xs text-zinc-500">{shareMsg}</div>}

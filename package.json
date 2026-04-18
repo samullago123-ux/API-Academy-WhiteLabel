@@ -15,7 +15,7 @@
     "sb:link": "supabase link --project-ref mhtpefallvlsxgxvsvbs",
     "sb:db:push": "supabase db push",
     "sb:functions:deploy": "supabase functions deploy --no-verify-jwt",
-    "sb:functions:deploy:all": "supabase functions deploy hello-world verify-certificate --no-verify-jwt"
+    "sb:functions:deploy:all": "supabase functions deploy hello-world verify-certificate issue-certificate sync-device --no-verify-jwt"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",

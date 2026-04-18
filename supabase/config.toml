@@ -12,3 +12,9 @@ verify_jwt = false
 
 [functions.verify-certificate]
 verify_jwt = false
+
+[functions.issue-certificate]
+verify_jwt = false
+
+[functions.sync-device]
+verify_jwt = false
