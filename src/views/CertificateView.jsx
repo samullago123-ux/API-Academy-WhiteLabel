@@ -29,16 +29,13 @@ function CertificateContent({ certificate, displayName, progress, levels, keyLea
   })()
   return (
     <div className="certificate-inner h-full p-7 sm:p-9">
-      <div className="relative h-full overflow-hidden rounded-[26px] bg-[#f8f4e8] ring-1 ring-amber-200/70 shadow-[0_25px_90px_rgba(0,0,0,0.25)]">
-        <div className="pointer-events-none absolute inset-0 opacity-40 [background:radial-gradient(900px_420px_at_20%_0%,rgba(180,132,44,0.20),transparent_55%),radial-gradient(700px_380px_at_100%_100%,rgba(120,53,15,0.12),transparent_55%)]" />
-        <div className="pointer-events-none absolute -left-24 top-20 rotate-[-12deg] text-[84px] font-black tracking-tight text-amber-900/5 sm:text-[110px]">
-          API
-        </div>
-        <div className="pointer-events-none absolute -right-16 top-44 rotate-[12deg] text-[72px] font-black tracking-tight text-amber-900/5 sm:text-[96px]">
-          Academy
-        </div>
+      <div className="cert-paper-outer h-full">
+        <div className="cert-paper-inner relative h-full">
+          <div className="pointer-events-none absolute inset-0 opacity-40 [background:radial-gradient(1100px_520px_at_10%_0%,rgba(184,134,11,0.18),transparent_60%),radial-gradient(900px_480px_at_100%_100%,rgba(120,53,15,0.10),transparent_60%)]" />
+          <div className="pointer-events-none absolute inset-4 rounded-[20px] border border-amber-300/40" />
+          <div className="pointer-events-none absolute inset-7 rounded-[16px] border border-amber-400/20" />
 
-        <div className="relative flex h-full flex-col p-8 sm:p-10">
+          <div className="relative flex h-full flex-col p-8 sm:p-10">
           <div className="flex items-start justify-between gap-6">
             <BrandMark tone="light" subtitle="Eficiencia operativa con automatización e IA" />
             <div className="text-right">
@@ -58,8 +55,8 @@ function CertificateContent({ certificate, displayName, progress, levels, keyLea
             <div className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-zinc-600">
               completó satisfactoriamente el programa de aprendizaje de APIs y arquitectura, con evaluación por nivel.
             </div>
-            <div className="mx-auto mt-6 grid h-14 w-14 place-items-center rounded-full border-2 border-amber-500/60 bg-amber-50 text-[10px] font-bold tracking-widest text-amber-700 shadow-sm">
-              AI
+            <div className="mx-auto mt-6 grid h-14 w-14 place-items-center rounded-full border-2 border-amber-500/70 bg-amber-50 text-[10px] font-black tracking-widest text-amber-800 shadow-sm">
+              SEAL
             </div>
           </div>
 
@@ -122,6 +119,7 @@ function CertificateContent({ certificate, displayName, progress, levels, keyLea
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   )
@@ -503,11 +501,7 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
               <div className="mt-1 text-xs text-zinc-500">Imprimir → Guardar como PDF</div>
             </div>
             <div className="certificate-preview-only certificate-page">
-              <div className="certificate-preview-frame">
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-indigo-500 via-sky-400 to-emerald-500 opacity-85" />
-                <div className="pointer-events-none absolute inset-0 opacity-70 mix-blend-overlay [background:radial-gradient(60rem_60rem_at_20%_10%,rgba(255,255,255,0.25),transparent_55%),radial-gradient(50rem_50rem_at_80%_90%,rgba(255,255,255,0.20),transparent_55%)]" />
-                <div className="pointer-events-none absolute -right-28 -top-28 h-96 w-96 rounded-full bg-white/25 blur-3xl" />
-                <div className="pointer-events-none absolute -bottom-36 -left-36 h-[28rem] w-[28rem] rounded-full bg-white/15 blur-3xl" />
+              <div className="certificate-preview-frame cert-frame">
 
                 <div className="certificate-preview-canvas">
                   <CertificateContent
@@ -522,12 +516,7 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
               </div>
             </div>
 
-            <div className="print-only certificate-page">
-              <div className="certificate-print-frame">
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-indigo-500 via-sky-400 to-emerald-500 opacity-85" />
-                <div className="pointer-events-none absolute inset-0 opacity-70 mix-blend-overlay [background:radial-gradient(60rem_60rem_at_20%_10%,rgba(255,255,255,0.25),transparent_55%),radial-gradient(50rem_50rem_at_80%_90%,rgba(255,255,255,0.20),transparent_55%)]" />
-                <div className="pointer-events-none absolute -right-28 -top-28 h-96 w-96 rounded-full bg-white/25 blur-3xl" />
-                <div className="pointer-events-none absolute -bottom-36 -left-36 h-[28rem] w-[28rem] rounded-full bg-white/15 blur-3xl" />
+              <div className="certificate-print-frame cert-frame">
 
                 <div className="certificate-print-canvas">
                   <CertificateContent
@@ -539,7 +528,6 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
                   />
                 </div>
               </div>
-            </div>
           </Card>
         </div>
       </Container>
