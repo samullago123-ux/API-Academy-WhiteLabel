@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -78,6 +80,7 @@
 
   body {
     @apply bg-zinc-950 text-zinc-200 antialiased font-sans;
+    font-family: 'Inter', sans-serif;
   }
 }
 
@@ -151,7 +154,7 @@
 
   .print-certificate .certificate-inner {
     height: 100% !important;
-    padding: 8mm !important;
+    padding: 4mm !important;
   }
 }
 
@@ -167,6 +170,7 @@
   max-width: 1056px;
   margin: 0 auto;
   aspect-ratio: 1056 / 748;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
 .certificate-screen-canvas {

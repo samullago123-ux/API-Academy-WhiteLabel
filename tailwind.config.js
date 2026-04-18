@@ -31,7 +31,7 @@ export default {
         orange: { 200: rgb('orange-200'), 300: rgb('orange-300'), 400: rgb('orange-400'), 500: rgb('orange-500') },
       },
       fontFamily: {
-        sans: ['Outfit', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Arial', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
       },
     },

@@ -33,7 +33,7 @@ function CertificateContent({ certificate, displayName, progress, levels, prefer
         <div className="h-full border border-[#C9A84C] p-6">
           <div className="mx-auto flex h-full w-full max-w-[900px] flex-col justify-between text-center">
             <div className="flex min-h-[15%] flex-col items-center justify-center">
-              <div className="grid h-10 w-10 place-items-center rounded-sm border border-[#1A1A2E] bg-white text-xs font-bold text-[#1A1A2E]">
+              <div className="grid h-10 w-10 place-items-center rounded-full border-2 border-[#C9A84C] bg-[#1A1A2E] text-[10px] font-bold tracking-wider text-[#C9A84C]">
                 WL
               </div>
               <div className="mt-2 text-[11px] font-semibold uppercase tracking-[4px] text-[#1A1A2E]">WHITELABEL AI ACADEMY</div>
@@ -62,7 +62,7 @@ function CertificateContent({ certificate, displayName, progress, levels, prefer
                 {levels.map((l, idx) => {
                   const score = certificate?.scores?.[l.hash]?.bestPct ?? progress?.[l.hash]?.quiz?.bestPct ?? 0
                   return (
-                    <div key={l.hash} className="h-[80px] w-[150px] border border-[#E0E0E0] bg-white px-3 py-2 text-center">
+                    <div key={l.hash} className="h-[80px] w-[150px] rounded-lg border border-[#E0E0E0] bg-white px-3 py-2 text-center">
                       <div className="text-[10px] uppercase tracking-[2px] text-[#666666]">NIVEL {idx + 1}</div>
                       <div className="mt-1 text-[14px] font-semibold text-[#1A1A2E]">{l.title}</div>
                       <div className="mt-1 text-[12px]" style={{ color: score > 0 ? '#C9A84C' : '#CCCCCC' }}>
