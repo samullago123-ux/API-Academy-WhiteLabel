@@ -515,8 +515,8 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
               </div>
             </div>
 
+            <div className="print-only certificate-page">
               <div className="certificate-print-frame cert-frame">
-
                 <div className="certificate-print-canvas">
                   <CertificateContent
                     certificate={certificate}
@@ -527,6 +527,7 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
                   />
                 </div>
               </div>
+            </div>
           </Card>
         </div>
       </Container>
