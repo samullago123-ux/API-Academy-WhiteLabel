@@ -87,23 +87,17 @@
 
 .certificate-screen-frame {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   width: 100%;
   max-width: 1056px;
   margin: 0 auto;
-  aspect-ratio: 1056 / 748;
-  min-height: 400px;
   box-shadow: 0 30px 100px rgba(0,0,0,0.5);
 }
 
 .certificate-screen-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 1056px;
   height: 748px;
   transform-origin: top left;
-  transform: scale(var(--cert-scale, 1));
 }
 
 .certificate-print-frame {

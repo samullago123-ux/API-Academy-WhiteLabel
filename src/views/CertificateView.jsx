@@ -170,10 +170,14 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
     function updateScale() {
       const el = certFrameRef.current
       if (!el) return
-      const containerWidth = el.offsetWidth
+      const containerWidth = el.parentElement.offsetWidth
       const scale = Math.min(containerWidth / 1056, 1)
-      el.style.setProperty('--cert-scale', scale)
-      el.style.height = Math.max(748 * scale, 400) + 'px'
+      el.style.width = '1056px'
+      el.style.height = '748px'
+      el.style.transform = `scale(${scale})`
+      el.style.transformOrigin = 'top left'
+      el.parentElement.style.height = (748 * scale) + 'px'
+      el.parentElement.style.position = 'relative'
     }
     updateScale()
     window.addEventListener('resize', updateScale)
@@ -527,8 +531,8 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
               <div className="mt-1 text-xs text-zinc-500">Imprimir → Guardar como PDF</div>
             </div>
             <div className="no-print certificate-page">
-              <div ref={certFrameRef} className="certificate-screen-frame cert-frame">
-                <div className="certificate-screen-canvas">
+              <div className="certificate-screen-frame cert-frame">
+                <div ref={certFrameRef} className="certificate-screen-canvas">
                   <CertificateContent
                     certificate={certificate}
                     displayName={displayName}
