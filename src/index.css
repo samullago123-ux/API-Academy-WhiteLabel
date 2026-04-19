@@ -92,22 +92,17 @@
   max-width: 1056px;
   margin: 0 auto;
   aspect-ratio: 1056 / 748;
-  min-height: 748px;
   box-shadow: 0 30px 100px rgba(0,0,0,0.5);
 }
 
-@media (max-width: 1056px) {
-  .certificate-screen-frame {
-    aspect-ratio: auto;
-    min-height: 748px;
-    height: auto;
-  }
-}
-
 .certificate-screen-canvas {
-  position: relative;
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1056px;
+  height: 748px;
+  transform-origin: top left;
+  transform: scale(var(--cert-scale, 1));
 }
 
 .certificate-print-frame {

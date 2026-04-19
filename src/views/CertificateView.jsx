@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Badge, Button, Card, Container } from '../components/ui.jsx'
 import { trackEvent } from '../services/analytics.js'
 import { issueCertificate, isCertificateEligible, loadCertificate, saveCertificate } from '../services/certificateStore.js'
@@ -164,6 +164,21 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
   const [remoteError, setRemoteError] = useState('')
   const [shareMsg, setShareMsg] = useState('')
   const [publishing, setPublishing] = useState(false)
+  const certFrameRef = React.useRef(null)
+
+  useEffect(() => {
+    function updateScale() {
+      const el = certFrameRef.current
+      if (!el) return
+      const containerWidth = el.offsetWidth
+      const scale = Math.min(containerWidth / 1056, 1)
+      el.style.setProperty('--cert-scale', scale)
+      el.style.height = (748 * scale) + 'px'
+    }
+    updateScale()
+    window.addEventListener('resize', updateScale)
+    return () => window.removeEventListener('resize', updateScale)
+  }, [])
 
   useEffect(() => {
     trackEvent(verifyId ? 'certificate_verify_open' : 'certificate_open', { verifyId: verifyId ?? null })
@@ -512,7 +527,7 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
               <div className="mt-1 text-xs text-zinc-500">Imprimir → Guardar como PDF</div>
             </div>
             <div className="no-print certificate-page">
-              <div className="certificate-screen-frame cert-frame">
+              <div ref={certFrameRef} className="certificate-screen-frame cert-frame">
                 <div className="certificate-screen-canvas">
                   <CertificateContent
                     certificate={certificate}
