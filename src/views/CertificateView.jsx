@@ -173,7 +173,7 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
       const containerWidth = el.offsetWidth
       const scale = Math.min(containerWidth / 1056, 1)
       el.style.setProperty('--cert-scale', scale)
-      el.style.height = (748 * scale) + 'px'
+      el.style.height = Math.max(748 * scale, 400) + 'px'
     }
     updateScale()
     window.addEventListener('resize', updateScale)

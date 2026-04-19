@@ -92,6 +92,7 @@
   max-width: 1056px;
   margin: 0 auto;
   aspect-ratio: 1056 / 748;
+  min-height: 400px;
   box-shadow: 0 30px 100px rgba(0,0,0,0.5);
 }
 
