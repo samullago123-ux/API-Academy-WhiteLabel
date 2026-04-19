@@ -21,7 +21,9 @@ function formatDate(ts) {
 
 function CertificateContent({ certificate, displayName, progress, levels, preferDraftName = false }) {
   const draftName = displayName.trim()
-  const finalName = preferDraftName ? (draftName || certificate?.displayName || '—') : (certificate?.displayName || draftName || '—')
+  const finalName = preferDraftName
+    ? (draftName || certificate?.displayName || '—')
+    : (certificate?.displayName || draftName || '—')
 
   const verifyUrl = (() => {
     if (!certificate?.id) return ''
@@ -31,127 +33,122 @@ function CertificateContent({ certificate, displayName, progress, levels, prefer
 
   return (
     <div className="certificate-inner">
-      <div className="cert-border-outer">
-        <div className="cert-border-inner">
-          <div className="cert-corner cert-corner-tl" />
-          <div className="cert-corner cert-corner-tr" />
-          <div className="cert-corner cert-corner-bl" />
-          <div className="cert-corner cert-corner-br" />
+      {/* Geometric shapes */}
+      <div className="cert-shape-tl" />
+      <div className="cert-shape-br" />
+      <div className="cert-shape-tr" />
+      <div className="cert-shape-bl" />
+      <div className="cert-gold-stripe-tl" />
+      <div className="cert-gold-stripe-br" />
 
-          <div className="cert-content">
-            <div className="cert-section cert-header">
-              <div className="cert-logo">
-                <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-                  <circle cx="20" cy="20" r="19" stroke="#C9A84C" strokeWidth="2" fill="#1A1A2E" />
-                  <text
-                    x="20"
-                    y="24"
-                    textAnchor="middle"
-                    fill="#C9A84C"
-                    fontSize="13"
-                    fontWeight="700"
-                    fontFamily="Inter, sans-serif"
-                  >
-                    WL
-                  </text>
-                </svg>
-              </div>
-              <div className="cert-academy-name">WHITELABEL AI ACADEMY</div>
-              <div className="cert-gold-line" />
-            </div>
+      {/* Gold border frame */}
+      <div className="cert-frame-gold" />
 
-            <div className="cert-section cert-title-block">
-              <h1 className="cert-title">CERTIFICATE</h1>
-              <div className="cert-subtitle">OF COMPLETION</div>
-            </div>
+      {/* Content */}
+      <div className="cert-content">
 
-            <div className="cert-section cert-recipient">
-              <div className="cert-certifies">This certifies that</div>
-              <div className="cert-name">{finalName}</div>
-              <div className="cert-name-underline" />
-            </div>
+        {/* Logo */}
+        <div className="cert-logo">
+          <span className="cert-logo-text">WL</span>
+        </div>
+        <div className="cert-academy">Whitelabel AI Academy</div>
 
-            <div className="cert-section cert-description">
-              <p>
-                completó satisfactoriamente el programa de aprendizaje
-                de APIs y arquitectura, con evaluación por nivel.
-              </p>
-            </div>
+        {/* Title */}
+        <div className="cert-title">Certificate</div>
+        <div className="cert-subtitle">of Completion</div>
 
-            <div className="cert-section cert-levels">
-              <div className="cert-levels-row">
-                {levels.map((l, idx) => {
-                  const score = certificate?.scores?.[l.hash]?.bestPct ?? progress?.[l.hash]?.quiz?.bestPct ?? 0
-                  const passed = score > 0
-                  return (
-                    <div key={l.hash} className={`cert-level-card ${passed ? 'cert-level-passed' : ''}`}>
-                      <div className="cert-level-label">NIVEL {idx + 1}</div>
-                      <div className="cert-level-title">{l.title}</div>
-                      <div className="cert-level-score" style={{ color: passed ? '#C9A84C' : '#BBBBBB' }}>
-                        Score: {score}%
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+        {/* Divider */}
+        <div className="cert-divider">
+          <div className="cert-divider-line" />
+          <div className="cert-divider-diamond" />
+          <div className="cert-divider-line" />
+        </div>
 
-            <div className="cert-section cert-footer">
-              <div className="cert-footer-columns">
-                <div className="cert-footer-col">
-                  <div className="cert-footer-line" />
-                  <div className="cert-footer-label">Fecha de emisión</div>
-                  <div className="cert-footer-value">
-                    {certificate?.issuedAt
-                      ? new Date(certificate.issuedAt).toLocaleDateString('es-ES')
-                      : new Date().toLocaleDateString('es-ES')}
+        {/* Recipient */}
+        <div className="cert-presented">This is proudly presented to</div>
+        <div className="cert-name">{finalName}</div>
+        <div className="cert-name-line" />
+
+        {/* Description */}
+        <p className="cert-desc">
+          por completar satisfactoriamente el programa de aprendizaje
+          de APIs y arquitectura, con evaluación por nivel.
+        </p>
+
+        {/* Levels */}
+        <div className="cert-levels">
+          {levels.map((l, idx) => {
+            const score = certificate?.scores?.[l.hash]?.bestPct
+              ?? progress?.[l.hash]?.quiz?.bestPct ?? 0
+            const passed = score > 0
+            return (
+              <div key={l.hash} className={`cert-level ${passed ? 'cert-level-passed' : ''}`}>
+                {passed && (
+                  <div className="cert-level-check">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M2 5L4.2 7.2L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </div>
-                </div>
-                <div className="cert-footer-seal">
-                  <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                    <circle cx="24" cy="24" r="22" stroke="#C9A84C" strokeWidth="1.5" fill="none" />
-                    <circle cx="24" cy="24" r="18" stroke="#C9A84C" strokeWidth="0.5" fill="none" />
-                    <text
-                      x="24"
-                      y="21"
-                      textAnchor="middle"
-                      fill="#C9A84C"
-                      fontSize="7"
-                      fontWeight="700"
-                      fontFamily="Inter, sans-serif"
-                    >
-                      VERIFIED
-                    </text>
-                    <text
-                      x="24"
-                      y="30"
-                      textAnchor="middle"
-                      fill="#1A1A2E"
-                      fontSize="5"
-                      fontFamily="Inter, sans-serif"
-                    >
-                      WHITELABEL
-                    </text>
-                  </svg>
-                </div>
-                <div className="cert-footer-col">
-                  <div className="cert-footer-line" />
-                  <div className="cert-footer-label">ID Certificado</div>
-                  <div className="cert-footer-value cert-footer-id">
-                    {certificate?.id ?? '—'}
-                  </div>
-                </div>
+                )}
+                <div className="cert-level-num">Nivel {idx + 1}</div>
+                <div className="cert-level-title">{l.title}</div>
+                <div className="cert-level-score" style={{
+                  color: passed ? '#c6a344' : '#ccc',
+                  fontWeight: passed ? 700 : 500,
+                }}>{score}%</div>
               </div>
-              {verifyUrl && (
-                <div className="cert-verify-url">Verificación: {verifyUrl}</div>
-              )}
-              {certificate?.signature && (
-                <div className="cert-signature">Firma: {certificate.signature.slice(0, 18)}…</div>
-              )}
-              <div className="cert-brand">whitelabel.ai</div>
+            )
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="cert-footer">
+          <div className="cert-footer-col">
+            <div className="cert-footer-line" />
+            <div className="cert-footer-label">Fecha de emisión</div>
+            <div className="cert-footer-val">
+              {certificate?.issuedAt
+                ? new Date(certificate.issuedAt).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })
+                : new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}
             </div>
           </div>
+
+          {/* Seal */}
+          <div className="cert-seal">
+            <svg width="68" height="68" viewBox="0 0 68 68" fill="none">
+              <g opacity="0.6">
+                <line x1="34" y1="2" x2="34" y2="8" stroke="#c6a344" strokeWidth="1.5"/>
+                <line x1="34" y1="60" x2="34" y2="66" stroke="#c6a344" strokeWidth="1.5"/>
+                <line x1="2" y1="34" x2="8" y2="34" stroke="#c6a344" strokeWidth="1.5"/>
+                <line x1="60" y1="34" x2="66" y2="34" stroke="#c6a344" strokeWidth="1.5"/>
+                <line x1="10.6" y1="10.6" x2="14.8" y2="14.8" stroke="#c6a344" strokeWidth="1"/>
+                <line x1="53.2" y1="53.2" x2="57.4" y2="57.4" stroke="#c6a344" strokeWidth="1"/>
+                <line x1="57.4" y1="10.6" x2="53.2" y2="14.8" stroke="#c6a344" strokeWidth="1"/>
+                <line x1="14.8" y1="53.2" x2="10.6" y2="57.4" stroke="#c6a344" strokeWidth="1"/>
+              </g>
+              <circle cx="34" cy="34" r="28" stroke="#c6a344" strokeWidth="2" fill="none"/>
+              <circle cx="34" cy="34" r="23" stroke="#c6a344" strokeWidth="0.8" fill="none"/>
+              <circle cx="34" cy="34" r="20" stroke="#0f1b3d" strokeWidth="0.5" fill="#0f1b3d"/>
+              <text x="34" y="31" textAnchor="middle" fill="#c6a344"
+                fontSize="7" fontWeight="700" fontFamily="Outfit, sans-serif" letterSpacing="1.5">VERIFIED</text>
+              <text x="34" y="40" textAnchor="middle" fill="#c6a344"
+                fontSize="5" fontWeight="400" fontFamily="Outfit, sans-serif" letterSpacing="1">WHITELABEL</text>
+            </svg>
+          </div>
+
+          <div className="cert-footer-col">
+            <div className="cert-footer-line" />
+            <div className="cert-footer-label">ID Certificado</div>
+            <div className="cert-footer-val cert-footer-id">{certificate?.id ?? '—'}</div>
+          </div>
         </div>
+
+        {verifyUrl && <div className="cert-verify-url">Verificación: {verifyUrl}</div>}
+        {certificate?.signature && (
+          <div className="cert-signature-text">Firma: {certificate.signature.slice(0, 18)}…</div>
+        )}
+        <div className="cert-brand">whitelabel.ai</div>
+
       </div>
     </div>
   )
