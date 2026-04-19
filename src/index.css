@@ -139,8 +139,8 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 220px;
-  height: 220px;
+  width: min(220px, 22%);
+  height: min(220px, 30%);
   overflow: hidden;
   z-index: 0;
 }
@@ -151,8 +151,8 @@
   left: 0;
   width: 0;
   height: 0;
-  border-left: 220px solid #0f1b3d;
-  border-bottom: 220px solid transparent;
+  border-left: min(220px, 22vw) solid #0f1b3d;
+  border-bottom: min(220px, 30vh) solid transparent;
 }
 .cert-shape-tl::after {
   content: '';
@@ -161,16 +161,16 @@
   left: 0;
   width: 0;
   height: 0;
-  border-left: 180px solid rgba(198,163,68,0.15);
-  border-bottom: 180px solid transparent;
+  border-left: min(180px, 18vw) solid rgba(198,163,68,0.15);
+  border-bottom: min(180px, 24vh) solid transparent;
 }
 
 .cert-shape-br {
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 220px;
-  height: 220px;
+  width: min(220px, 22%);
+  height: min(220px, 30%);
   overflow: hidden;
   z-index: 0;
 }
@@ -181,8 +181,8 @@
   right: 0;
   width: 0;
   height: 0;
-  border-right: 220px solid #0f1b3d;
-  border-top: 220px solid transparent;
+  border-right: min(220px, 22vw) solid #0f1b3d;
+  border-top: min(220px, 30vh) solid transparent;
 }
 .cert-shape-br::after {
   content: '';
@@ -191,16 +191,16 @@
   right: 0;
   width: 0;
   height: 0;
-  border-right: 180px solid rgba(198,163,68,0.15);
-  border-top: 180px solid transparent;
+  border-right: min(180px, 18vw) solid rgba(198,163,68,0.15);
+  border-top: min(180px, 24vh) solid transparent;
 }
 
 .cert-shape-tr {
   position: absolute;
   top: 0;
   right: 0;
-  width: 80px;
-  height: 80px;
+  width: min(80px, 8%);
+  height: min(80px, 11%);
   overflow: hidden;
   z-index: 0;
 }
@@ -211,16 +211,16 @@
   right: 0;
   width: 0;
   height: 0;
-  border-right: 80px solid #0f1b3d;
-  border-bottom: 80px solid transparent;
+  border-right: min(80px, 8vw) solid #0f1b3d;
+  border-bottom: min(80px, 11vh) solid transparent;
 }
 
 .cert-shape-bl {
   position: absolute;
   bottom: 0;
   left: 0;
-  width: 80px;
-  height: 80px;
+  width: min(80px, 8%);
+  height: min(80px, 11%);
   overflow: hidden;
   z-index: 0;
 }
@@ -231,14 +231,14 @@
   left: 0;
   width: 0;
   height: 0;
-  border-left: 80px solid #0f1b3d;
-  border-top: 80px solid transparent;
+  border-left: min(80px, 8vw) solid #0f1b3d;
+  border-top: min(80px, 11vh) solid transparent;
 }
 
 .cert-gold-stripe-tl {
   position: absolute;
   top: 0;
-  left: 195px;
+  left: min(195px, 19%);
   width: 8px;
   height: 160px;
   background: linear-gradient(to bottom, #c6a344, #d4b85a, transparent);
@@ -250,7 +250,7 @@
 .cert-gold-stripe-br {
   position: absolute;
   bottom: 0;
-  right: 195px;
+  right: min(195px, 19%);
   width: 8px;
   height: 160px;
   background: linear-gradient(to top, #c6a344, #d4b85a, transparent);
@@ -280,7 +280,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 100px;
+  padding: 40px clamp(40px, 8%, 100px);
   text-align: center;
 }
 
@@ -317,13 +317,16 @@
 
 .cert-title {
   font-family: 'Playfair Display', serif;
-  font-size: 62px;
+  font-size: clamp(36px, 5.8vw, 62px);
   font-weight: 900;
   color: #0f1b3d;
   letter-spacing: 4px;
   text-transform: uppercase;
   line-height: 0.95;
   margin-bottom: 4px;
+  width: 100%;
+  overflow: visible;
+  padding: 0 10px;
 }
 
 .cert-subtitle {
@@ -369,7 +372,7 @@
 
 .cert-name {
   font-family: 'Playfair Display', serif;
-  font-size: 42px;
+  font-size: clamp(28px, 4vw, 42px);
   font-weight: 700;
   font-style: italic;
   color: #0f1b3d;
@@ -395,12 +398,18 @@
 
 .cert-levels {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   margin-bottom: 28px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 100%;
+  padding: 0 20px;
 }
 
 .cert-level {
-  width: 155px;
+  width: 140px;
+  min-width: 120px;
+  flex-shrink: 1;
   height: 72px;
   border: 1.5px solid #e0dcd0;
   border-radius: 4px;
@@ -460,13 +469,15 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: 50px;
+  gap: clamp(20px, 4%, 50px);
   width: 100%;
 }
 
 .cert-footer-col {
   text-align: center;
-  width: 150px;
+  width: auto;
+  min-width: 120px;
+  max-width: 150px;
 }
 
 .cert-footer-line {
