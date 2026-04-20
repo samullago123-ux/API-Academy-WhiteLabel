@@ -131,6 +131,43 @@ export function Tabs({ value, onValueChange, items, className }) {
   )
 }
 
+export function Modal({
+  open,
+  title,
+  description,
+  children,
+  onClose,
+  actions,
+  widthClassName = 'max-w-md',
+}) {
+  if (!open) return null
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-zinc-950/80 p-4 backdrop-blur-sm">
+      <div className={cn('w-full rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl', widthClassName)}>
+        <div className="border-b border-zinc-800 px-5 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-base font-extrabold text-zinc-100">{title}</h3>
+              {description && <p className="mt-1 text-sm text-zinc-400">{description}</p>}
+            </div>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="rounded-lg px-2 py-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="px-5 py-4">{children}</div>
+        {actions && <div className="flex items-center justify-end gap-2 border-t border-zinc-800 px-5 py-4">{actions}</div>}
+      </div>
+    </div>
+  )
+}
+
 export function CodeBlock({ className, ...props }) {
   return (
     <pre

@@ -1,4 +1,5 @@
-import { Badge, BrandMark, Button, Card, CardBody, CardHeader, Container, ProgressBar, Tabs } from './ui'
+import { useState } from 'react'
+import { Badge, BrandMark, Button, Card, CardBody, CardHeader, Container, Modal, ProgressBar, Tabs } from './ui'
 
 export default function LabLayout({
   icon,
@@ -23,6 +24,7 @@ export default function LabLayout({
 
   const progress = lessons.length ? (visited.length / lessons.length) * 100 : 0
   const currentLesson = lessons[Math.max(0, currentIdx)] ?? lessons[0]
+  const [pendingNextLesson, setPendingNextLesson] = useState(null)
 
   function shouldConfirmLeaveQuiz() {
     if (typeof window === 'undefined') return false
@@ -37,8 +39,8 @@ export default function LabLayout({
 
   function guardedNavigate(nextId) {
     if (activeLesson === 'quiz' && typeof window !== 'undefined' && window.__aaQuizInProgress && shouldConfirmLeaveQuiz()) {
-      const ok = window.confirm('Si sales del quiz ahora, se va a borrar tu progreso actual. ¿Quieres continuar?')
-      if (!ok) return
+      setPendingNextLesson(nextId)
+      return
     }
     onNavigate(nextId)
   }
@@ -96,6 +98,31 @@ export default function LabLayout({
           </Button>
         </div>
       </Container>
+
+      <Modal
+        open={pendingNextLesson !== null}
+        title="Salir del quiz"
+        description="Si cambias de lección ahora, se va a borrar el progreso actual del quiz."
+        onClose={() => setPendingNextLesson(null)}
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setPendingNextLesson(null)}>Cancelar</Button>
+            <Button
+              onClick={() => {
+                const next = pendingNextLesson
+                setPendingNextLesson(null)
+                if (next) onNavigate(next)
+              }}
+            >
+              Continuar
+            </Button>
+          </>
+        }
+      >
+        <div className="text-sm text-zinc-400">
+          Esta acción aplica para Tabs, botón Anterior y botón Siguiente.
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import { Badge, Button, Card, Container, Tabs } from './components/ui'
+import { Badge, Button, Card, Container, Modal, Tabs } from './components/ui'
 import { loadAllProgress, saveLabProgress } from './services/progressStore.js'
 import { aggregateMetrics, clearEvents, loadEvents, trackEvent } from './services/analytics.js'
 import { initTheme } from './theme/theme.js'
@@ -110,7 +110,16 @@ function getRouteFromLocation() {
 }
 
 function loadSettings() {
-  if (typeof window === 'undefined') return { confirmLeaveQuiz: true, dailyMode: 'wrong', speedTimeLimitSec: 60, speedQuestionCount: 10 }
+  if (typeof window === 'undefined') {
+    return {
+      confirmLeaveQuiz: true,
+      dailyMode: 'wrong',
+      speedTimeLimitSec: 60,
+      speedQuestionCount: 10,
+      showMetricsByDefault: false,
+      autoSyncEnabled: true,
+    }
+  }
   try {
     const raw = window.localStorage.getItem('api-academy-settings:v1')
     const parsed = raw ? JSON.parse(raw) : null
@@ -119,9 +128,18 @@ function loadSettings() {
       dailyMode: parsed?.dailyMode === 'mixed' ? 'mixed' : 'wrong',
       speedTimeLimitSec: Number(parsed?.speedTimeLimitSec ?? 60),
       speedQuestionCount: Number(parsed?.speedQuestionCount ?? 10),
+      showMetricsByDefault: (parsed?.showMetricsByDefault ?? false) === true,
+      autoSyncEnabled: (parsed?.autoSyncEnabled ?? true) === true,
     }
   } catch {
-    return { confirmLeaveQuiz: true, dailyMode: 'wrong', speedTimeLimitSec: 60, speedQuestionCount: 10 }
+    return {
+      confirmLeaveQuiz: true,
+      dailyMode: 'wrong',
+      speedTimeLimitSec: 60,
+      speedQuestionCount: 10,
+      showMetricsByDefault: false,
+      autoSyncEnabled: true,
+    }
   }
 }
 
@@ -142,11 +160,13 @@ function App() {
 
   const progress = loadAllProgress()
   const [searchQuery, setSearchQuery] = useState('')
-  const [showMetrics, setShowMetrics] = useState(false)
+  const [showMetrics, setShowMetrics] = useState(() => loadSettings().showMetricsByDefault === true)
   const [showSettings, setShowSettings] = useState(false)
   const [settingsTab, setSettingsTab] = useState('student')
   const [settings, setSettings] = useState(() => loadSettings())
   const [adminUnlocked, setAdminUnlocked] = useState(false)
+  const [pinModal, setPinModal] = useState({ open: false, mode: null, pin1: '', pin2: '', error: '' })
+  const [dangerModal, setDangerModal] = useState({ open: false, kind: null })
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
   const [lastSyncAt, setLastSyncAt] = useState(() => {
@@ -182,56 +202,74 @@ function App() {
     }
   }
 
-  function unlockAdmin() {
+  function openUnlockAdmin() {
     if (typeof window === 'undefined') return
     const existing = window.localStorage.getItem('api-academy-admin-pin:v1') ?? ''
     if (!existing) {
-      const pin1 = window.prompt('Definí un PIN admin (se guarda en este dispositivo):')
-      if (!pin1) return
-      const pin2 = window.prompt('Repetí el PIN admin:')
-      if (!pin2) return
-      if (pin1 !== pin2) {
-        window.alert('Los PIN no coinciden.')
+      setPinModal({ open: true, mode: 'create', pin1: '', pin2: '', error: '' })
+      return
+    }
+    setPinModal({ open: true, mode: 'unlock', pin1: '', pin2: '', error: '' })
+  }
+
+  function openChangeAdminPin() {
+    if (typeof window === 'undefined') return
+    if (!adminUnlocked) return
+    setPinModal({ open: true, mode: 'change', pin1: '', pin2: '', error: '' })
+  }
+
+  function closePinModal() {
+    setPinModal({ open: false, mode: null, pin1: '', pin2: '', error: '' })
+  }
+
+  function submitPinModal() {
+    if (typeof window === 'undefined') return
+    const mode = pinModal.mode
+    const pin1 = String(pinModal.pin1 ?? '').trim()
+    const pin2 = String(pinModal.pin2 ?? '').trim()
+
+    if (!pin1 || pin1.length < 4) {
+      setPinModal((prev) => ({ ...prev, error: 'El PIN debe tener al menos 4 caracteres.' }))
+      return
+    }
+
+    if (mode === 'unlock') {
+      const existing = window.localStorage.getItem('api-academy-admin-pin:v1') ?? ''
+      if (pin1 !== existing) {
+        setPinModal((prev) => ({ ...prev, error: 'PIN incorrecto.' }))
         return
       }
-      window.localStorage.setItem('api-academy-admin-pin:v1', pin1)
       setAdminUnlocked(true)
+      closePinModal()
       return
     }
-    const pin = window.prompt('Ingresá el PIN admin:')
-    if (!pin) return
-    if (pin !== existing) {
-      window.alert('PIN incorrecto.')
-      return
-    }
-    setAdminUnlocked(true)
-  }
 
-  function changeAdminPin() {
-    if (typeof window === 'undefined') return
-    if (!adminUnlocked) return
-    const pin1 = window.prompt('Nuevo PIN admin:')
-    if (!pin1) return
-    const pin2 = window.prompt('Repetí el nuevo PIN admin:')
-    if (!pin2) return
-    if (pin1 !== pin2) {
-      window.alert('Los PIN no coinciden.')
+    if (!pin2 || pin1 !== pin2) {
+      setPinModal((prev) => ({ ...prev, error: 'Los PIN no coinciden.' }))
       return
     }
+
     window.localStorage.setItem('api-academy-admin-pin:v1', pin1)
-    window.alert('PIN actualizado.')
+    setAdminUnlocked(true)
+    closePinModal()
   }
 
-  function adminClearLocalData(kind) {
+  function requestClearLocalData(kind) {
     if (typeof window === 'undefined') return
     if (!adminUnlocked) return
-    const ok = window.confirm('Esto borra datos locales en este dispositivo. ¿Continuar?')
-    if (!ok) return
+    setDangerModal({ open: true, kind })
+  }
+
+  function adminClearLocalData() {
+    if (typeof window === 'undefined') return
+    const kind = dangerModal.kind
+    if (!kind) return
     if (kind === 'progress') window.localStorage.removeItem('api-academy-progress:v1')
     if (kind === 'certificate') window.localStorage.removeItem('api-academy-certificate:v1')
     if (kind === 'events') window.localStorage.removeItem('api-academy-analytics:v1')
     if (kind === 'challenges') window.localStorage.removeItem('api-academy-challenges:v1')
     if (kind === 'sync') window.localStorage.removeItem('api-academy:last-sync')
+    setDangerModal({ open: false, kind: null })
     window.location.reload()
   }
 
@@ -240,6 +278,7 @@ function App() {
   }, [])
 
   useEffect(() => {
+    if (!settings.autoSyncEnabled) return
     if (!supabase) return
     const id = window.setTimeout(() => {
       const deviceId = getDeviceId()
@@ -260,7 +299,7 @@ function App() {
         .catch(() => {})
     }, 900)
     return () => window.clearTimeout(id)
-  }, [])
+  }, [settings.autoSyncEnabled])
 
   useEffect(() => {
     const q = searchQuery.trim()
@@ -381,143 +420,7 @@ function App() {
             >
               🏆 Certificado
             </a>
-            <button
-              onClick={() => {
-                setShowSettings((v) => !v)
-                trackEvent('toggle_settings', { open: !showSettings })
-              }}
-              className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 px-4 text-sm font-bold text-zinc-200 transition-colors hover:bg-zinc-900"
-            >
-              ⚙️ Configuración
-            </button>
           </div>
-
-          {showSettings && (
-            <div className="mx-auto mt-6 w-full max-w-3xl text-left">
-              <Card className="p-6">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <div className="text-sm font-extrabold text-zinc-100">Configuración</div>
-                    <div className="mt-1 text-xs text-zinc-500">Preferencias del alumno y modo admin</div>
-                  </div>
-                  <Button variant="secondary" onClick={() => setShowSettings(false)}>Cerrar</Button>
-                </div>
-
-                <Tabs
-                  value={settingsTab}
-                  onValueChange={setSettingsTab}
-                  items={[
-                    { value: 'student', icon: '👤', label: 'Alumno' },
-                    { value: 'admin', icon: '🛠️', label: 'Admin' },
-                  ]}
-                  className="mb-5"
-                />
-
-                {settingsTab === 'student' && (
-                  <div className="grid gap-4">
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                      <div className="text-xs font-bold tracking-widest text-zinc-500">QUIZ</div>
-                      <label className="mt-3 flex cursor-pointer items-center gap-3 text-sm text-zinc-300">
-                        <input
-                          type="checkbox"
-                          checked={settings.confirmLeaveQuiz}
-                          onChange={(e) => saveSettings({ confirmLeaveQuiz: e.target.checked })}
-                          className="h-4 w-4 accent-indigo-500"
-                        />
-                        Advertir al salir del quiz (se pierde progreso)
-                      </label>
-                    </div>
-
-                    <div className="grid gap-4 lg:grid-cols-2">
-                      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                        <div className="text-xs font-bold tracking-widest text-zinc-500">DAILY</div>
-                        <div className="mt-3">
-                          <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Modo</label>
-                          <select
-                            value={settings.dailyMode}
-                            onChange={(e) => saveSettings({ dailyMode: e.target.value === 'mixed' ? 'mixed' : 'wrong' })}
-                            className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
-                          >
-                            <option value="wrong">Solo fallos primero</option>
-                            <option value="mixed">Mixto (todas)</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                        <div className="text-xs font-bold tracking-widest text-zinc-500">SPEED</div>
-                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                          <div>
-                            <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Tiempo</label>
-                            <select
-                              value={settings.speedTimeLimitSec}
-                              onChange={(e) => saveSettings({ speedTimeLimitSec: Number(e.target.value) })}
-                              className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
-                            >
-                              {[30, 45, 60, 75, 90].map((s) => (
-                                <option key={s} value={s}>{s}s</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Preguntas</label>
-                            <select
-                              value={settings.speedQuestionCount}
-                              onChange={(e) => saveSettings({ speedQuestionCount: Number(e.target.value) })}
-                              className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
-                            >
-                              {[5, 8, 10, 12, 15].map((n) => (
-                                <option key={n} value={n}>{n}</option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="text-xs text-zinc-500">
-                      Estas preferencias se guardan en este dispositivo.
-                    </div>
-                  </div>
-                )}
-
-                {settingsTab === 'admin' && (
-                  <div className="grid gap-4">
-                    {!adminUnlocked ? (
-                      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                        <div className="text-xs font-bold tracking-widest text-zinc-500">MODO ADMIN</div>
-                        <div className="mt-2 text-sm text-zinc-400">Bloqueado</div>
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          <Button onClick={unlockAdmin}>Desbloquear</Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                        <div className="text-xs font-bold tracking-widest text-zinc-500">MODO ADMIN</div>
-                        <div className="mt-2 text-sm text-emerald-300">Activo</div>
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          <Button variant="secondary" onClick={changeAdminPin}>Cambiar PIN</Button>
-                          <Button variant="ghost" onClick={() => setAdminUnlocked(false)}>Cerrar admin</Button>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                      <div className="text-xs font-bold tracking-widest text-zinc-500">DATOS LOCALES</div>
-                      <div className="mt-2 text-sm text-zinc-400">Acciones peligrosas (recarga la app)</div>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <Button variant="secondary" onClick={() => adminClearLocalData('progress')} disabled={!adminUnlocked}>Borrar progreso</Button>
-                        <Button variant="secondary" onClick={() => adminClearLocalData('certificate')} disabled={!adminUnlocked}>Borrar certificado</Button>
-                        <Button variant="secondary" onClick={() => adminClearLocalData('events')} disabled={!adminUnlocked}>Borrar analítica</Button>
-                        <Button variant="secondary" onClick={() => adminClearLocalData('challenges')} disabled={!adminUnlocked}>Borrar retos</Button>
-                        <Button variant="secondary" onClick={() => adminClearLocalData('sync')} disabled={!adminUnlocked}>Borrar sync</Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </Card>
-            </div>
-          )}
 
           <div className="mx-auto mt-6 w-full max-w-xl text-left">
             <label htmlFor="lesson-search" className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">
@@ -785,6 +688,227 @@ function App() {
           <p className="mt-10 text-xs text-zinc-600">Whitelabel AI — Eficiencia operativa con automatización e IA</p>
         </div>
       </Container>
+
+      <button
+        onClick={() => {
+          setShowSettings(true)
+          trackEvent('toggle_settings', { open: true })
+        }}
+        className="fixed right-5 top-1/2 z-40 inline-flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900/95 text-xl text-zinc-200 shadow-xl transition-colors hover:bg-zinc-800"
+        aria-label="Abrir configuración"
+      >
+        ⚙️
+      </button>
+
+      {showSettings && (
+        <div className="fixed inset-0 z-40 bg-zinc-950/75 backdrop-blur-sm">
+          <div
+            className="absolute inset-0"
+            onClick={() => {
+              setShowSettings(false)
+              trackEvent('toggle_settings', { open: false })
+            }}
+          />
+          <div className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto border-l border-zinc-800 bg-zinc-950 p-5">
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <div>
+                <div className="text-sm font-extrabold text-zinc-100">Configuración</div>
+                <div className="mt-1 text-xs text-zinc-500">Preferencias de alumno y modo admin</div>
+              </div>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowSettings(false)
+                  trackEvent('toggle_settings', { open: false })
+                }}
+              >
+                Cerrar
+              </Button>
+            </div>
+
+            <Tabs
+              value={settingsTab}
+              onValueChange={setSettingsTab}
+              items={[
+                { value: 'student', icon: '👤', label: 'Alumno' },
+                { value: 'admin', icon: '🛠️', label: 'Admin' },
+              ]}
+              className="mb-5"
+            />
+
+            {settingsTab === 'student' && (
+              <div className="grid gap-4">
+                <Card className="p-4 text-left">
+                  <div className="text-xs font-bold tracking-widest text-zinc-500">QUIZ</div>
+                  <label className="mt-3 flex cursor-pointer items-center gap-3 text-sm text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={settings.confirmLeaveQuiz}
+                      onChange={(e) => saveSettings({ confirmLeaveQuiz: e.target.checked })}
+                      className="h-4 w-4 accent-indigo-500"
+                    />
+                    Advertencia al salir del quiz en curso
+                  </label>
+                </Card>
+
+                <Card className="p-4 text-left">
+                  <div className="text-xs font-bold tracking-widest text-zinc-500">ENTRENAMIENTO</div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Daily</label>
+                      <select
+                        value={settings.dailyMode}
+                        onChange={(e) => saveSettings({ dailyMode: e.target.value === 'mixed' ? 'mixed' : 'wrong' })}
+                        className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+                      >
+                        <option value="wrong">Reforzar fallos</option>
+                        <option value="mixed">Mixto</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Speed (tiempo)</label>
+                      <select
+                        value={settings.speedTimeLimitSec}
+                        onChange={(e) => saveSettings({ speedTimeLimitSec: Number(e.target.value) })}
+                        className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+                      >
+                        {[30, 45, 60, 75, 90].map((s) => (
+                          <option key={s} value={s}>{s}s</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Speed (preguntas)</label>
+                      <select
+                        value={settings.speedQuestionCount}
+                        onChange={(e) => saveSettings({ speedQuestionCount: Number(e.target.value) })}
+                        className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+                      >
+                        {[5, 8, 10, 12, 15].map((n) => (
+                          <option key={n} value={n}>{n}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="p-4 text-left">
+                  <div className="text-xs font-bold tracking-widest text-zinc-500">APP</div>
+                  <label className="mt-3 flex cursor-pointer items-center gap-3 text-sm text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={settings.showMetricsByDefault}
+                      onChange={(e) => {
+                        saveSettings({ showMetricsByDefault: e.target.checked })
+                        setShowMetrics(e.target.checked)
+                      }}
+                      className="h-4 w-4 accent-indigo-500"
+                    />
+                    Mostrar métricas al abrir inicio
+                  </label>
+                  <label className="mt-3 flex cursor-pointer items-center gap-3 text-sm text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={settings.autoSyncEnabled}
+                      onChange={(e) => saveSettings({ autoSyncEnabled: e.target.checked })}
+                      className="h-4 w-4 accent-indigo-500"
+                    />
+                    Sincronización automática al iniciar
+                  </label>
+                </Card>
+              </div>
+            )}
+
+            {settingsTab === 'admin' && (
+              <div className="grid gap-4">
+                <Card className="p-4 text-left">
+                  <div className="text-xs font-bold tracking-widest text-zinc-500">MODO ADMIN</div>
+                  {!adminUnlocked ? (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span className="text-sm text-zinc-400">Bloqueado</span>
+                      <Button onClick={openUnlockAdmin}>Desbloquear con PIN</Button>
+                    </div>
+                  ) : (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span className="text-sm text-emerald-300">Activo</span>
+                      <Button variant="secondary" onClick={openChangeAdminPin}>Cambiar PIN</Button>
+                      <Button variant="ghost" onClick={() => setAdminUnlocked(false)}>Cerrar admin</Button>
+                    </div>
+                  )}
+                </Card>
+
+                <Card className="p-4 text-left">
+                  <div className="text-xs font-bold tracking-widest text-zinc-500">ACCIONES DE DATOS</div>
+                  <div className="mt-2 text-sm text-zinc-400">Borrado local por categorías (requiere modo admin).</div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button variant="secondary" onClick={() => requestClearLocalData('progress')} disabled={!adminUnlocked}>Borrar progreso</Button>
+                    <Button variant="secondary" onClick={() => requestClearLocalData('certificate')} disabled={!adminUnlocked}>Borrar certificado</Button>
+                    <Button variant="secondary" onClick={() => requestClearLocalData('events')} disabled={!adminUnlocked}>Borrar analítica</Button>
+                    <Button variant="secondary" onClick={() => requestClearLocalData('challenges')} disabled={!adminUnlocked}>Borrar retos</Button>
+                    <Button variant="secondary" onClick={() => requestClearLocalData('sync')} disabled={!adminUnlocked}>Borrar estado sync</Button>
+                  </div>
+                </Card>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <Modal
+        open={pinModal.open}
+        title={pinModal.mode === 'unlock' ? 'PIN de administrador' : pinModal.mode === 'change' ? 'Cambiar PIN' : 'Crear PIN admin'}
+        description="Este PIN protege las acciones administrativas en este dispositivo."
+        onClose={closePinModal}
+        actions={
+          <>
+            <Button variant="secondary" onClick={closePinModal}>Cancelar</Button>
+            <Button onClick={submitPinModal}>{pinModal.mode === 'unlock' ? 'Desbloquear' : 'Guardar PIN'}</Button>
+          </>
+        }
+      >
+        <div className="grid gap-3">
+          <div>
+            <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">
+              {pinModal.mode === 'unlock' ? 'PIN actual' : 'PIN'}
+            </label>
+            <input
+              type="password"
+              value={pinModal.pin1}
+              onChange={(e) => setPinModal((prev) => ({ ...prev, pin1: e.target.value, error: '' }))}
+              className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+            />
+          </div>
+          {pinModal.mode !== 'unlock' && (
+            <div>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Confirmar PIN</label>
+              <input
+                type="password"
+                value={pinModal.pin2}
+                onChange={(e) => setPinModal((prev) => ({ ...prev, pin2: e.target.value, error: '' }))}
+                className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+              />
+            </div>
+          )}
+          {pinModal.error && <div className="text-sm text-red-300">{pinModal.error}</div>}
+        </div>
+      </Modal>
+
+      <Modal
+        open={dangerModal.open}
+        title="Confirmar borrado"
+        description="Esta acción elimina datos locales del dispositivo y recarga la app."
+        onClose={() => setDangerModal({ open: false, kind: null })}
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setDangerModal({ open: false, kind: null })}>Cancelar</Button>
+            <Button onClick={adminClearLocalData}>Borrar ahora</Button>
+          </>
+        }
+      >
+        <div className="text-sm text-zinc-400">
+          Se eliminará: <span className="font-bold text-zinc-200">{String(dangerModal.kind ?? '')}</span>
+        </div>
+      </Modal>
     </div>
   )
 }

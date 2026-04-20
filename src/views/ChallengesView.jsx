@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Quiz from '../components/Quiz.jsx'
-import { Badge, BrandMark, Button, Card, Container, Tabs } from '../components/ui.jsx'
+import { Badge, BrandMark, Button, Card, Container, Modal, Tabs } from '../components/ui.jsx'
 import { simulateAPI } from '../services/apiMock.js'
 import { trackEvent } from '../services/analytics.js'
 import { loadAllProgress, recordQuizAttempt } from '../services/progressStore.js'
@@ -68,6 +68,7 @@ export default function ChallengesView({ onBack }) {
   const [loading, setLoading] = useState(false)
   const [stats, setStats] = useState(() => loadStats())
   const [showHint, setShowHint] = useState(false)
+  const [pendingAction, setPendingAction] = useState(null)
 
   function loadSettings() {
     if (typeof window === 'undefined') return { confirmLeaveQuiz: true, dailyMode: 'wrong', speedTimeLimitSec: 60, speedQuestionCount: 10 }
@@ -91,16 +92,22 @@ export default function ChallengesView({ onBack }) {
     if (typeof window === 'undefined') return true
     if (!settings.confirmLeaveQuiz) return true
     if (!window.__aaQuizInProgress) return true
-    return window.confirm('Si sales del quiz ahora, se va a borrar tu progreso actual. ¿Quieres continuar?')
+    return false
   }
 
   function guardedBack() {
-    if (!confirmLoseQuizProgress()) return
+    if (!confirmLoseQuizProgress()) {
+      setPendingAction({ type: 'back' })
+      return
+    }
     onBack?.()
   }
 
   function guardedSetTab(nextTab) {
-    if (!confirmLoseQuizProgress()) return
+    if (!confirmLoseQuizProgress()) {
+      setPendingAction({ type: 'tab', value: nextTab })
+      return
+    }
     setTab(nextTab)
   }
 
@@ -637,6 +644,33 @@ export default function ChallengesView({ onBack }) {
           </div>
         )}
       </Container>
+
+      <Modal
+        open={pendingAction !== null}
+        title="Salir del quiz"
+        description="Si continuas, se perderá el progreso actual del quiz."
+        onClose={() => setPendingAction(null)}
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setPendingAction(null)}>Cancelar</Button>
+            <Button
+              onClick={() => {
+                const action = pendingAction
+                setPendingAction(null)
+                if (!action) return
+                if (action.type === 'back') onBack?.()
+                if (action.type === 'tab' && typeof action.value === 'string') setTab(action.value)
+              }}
+            >
+              Continuar
+            </Button>
+          </>
+        }
+      >
+        <div className="text-sm text-zinc-400">
+          Te recomendamos terminar el quiz antes de cambiar de sección.
+        </div>
+      </Modal>
     </div>
   )
 }
