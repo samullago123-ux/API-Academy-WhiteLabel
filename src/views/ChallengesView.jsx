@@ -552,7 +552,26 @@ export default function ChallengesView({ onBack }) {
                 <Badge color="red">Boss</Badge>
               </div>
               <div className="mb-4 flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3">
-                <div className={`text-5xl ${bossDamageFx ? 'boss-damage-hit' : 'boss-idle-float'}`}>👹</div>
+                <div
+                  className={[
+                    'boss-sprite',
+                    bossHp <= 0 ? 'is-dead' : '',
+                    bossDamageFx ? 'is-hit' : 'is-idle',
+                  ].filter(Boolean).join(' ')}
+                >
+                  <div className="boss-fist" aria-hidden="true" />
+                  <div className="boss-hit-spark" aria-hidden="true">💥</div>
+                  <div className="boss-face" aria-hidden="true">
+                    <div className="boss-eyes">
+                      <div className="boss-eye" />
+                      <div className="boss-eye" />
+                    </div>
+                    <div className="boss-mouth" />
+                    <div className="boss-cheek boss-cheek-left" />
+                    <div className="boss-cheek boss-cheek-right" />
+                  </div>
+                  <div className="boss-tomb" aria-hidden="true">🪦</div>
+                </div>
                 <div className="text-right">
                   <div className="text-xs font-bold tracking-widest text-zinc-500">ESTADO</div>
                   <div className={`mt-1 text-sm font-bold ${bossHp > 0 ? 'text-zinc-200' : 'text-emerald-300'}`}>
