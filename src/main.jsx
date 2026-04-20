@@ -4,7 +4,7 @@ import './index.css'
 import { Badge, Button, Card, Container, Modal, Tabs } from './components/ui'
 import { loadAllProgress, saveLabProgress } from './services/progressStore.js'
 import { aggregateMetrics, clearEvents, loadEvents, trackEvent } from './services/analytics.js'
-import { initTheme } from './theme/theme.js'
+import { applyTheme, initTheme } from './theme/theme.js'
 import { supabase } from './services/supabaseClient.js'
 import { loadCertificate } from './services/certificateStore.js'
 import { loadProfile } from './services/profileStore.js'
@@ -110,8 +110,11 @@ function getRouteFromLocation() {
 }
 
 function loadSettings() {
+  const storedTheme = typeof window === 'undefined' ? '' : (window.localStorage.getItem('wl:theme') ?? '')
   if (typeof window === 'undefined') {
     return {
+      themeName: storedTheme || 'dark',
+      uiScale: 1,
       confirmLeaveQuiz: true,
       dailyMode: 'wrong',
       speedTimeLimitSec: 60,
@@ -124,6 +127,8 @@ function loadSettings() {
     const raw = window.localStorage.getItem('api-academy-settings:v1')
     const parsed = raw ? JSON.parse(raw) : null
     return {
+      themeName: storedTheme || parsed?.themeName || 'dark',
+      uiScale: Number(parsed?.uiScale ?? 1),
       confirmLeaveQuiz: (parsed?.confirmLeaveQuiz ?? true) === true,
       dailyMode: parsed?.dailyMode === 'mixed' ? 'mixed' : 'wrong',
       speedTimeLimitSec: Number(parsed?.speedTimeLimitSec ?? 60),
@@ -133,6 +138,8 @@ function loadSettings() {
     }
   } catch {
     return {
+      themeName: storedTheme || 'dark',
+      uiScale: 1,
       confirmLeaveQuiz: true,
       dailyMode: 'wrong',
       speedTimeLimitSec: 60,
@@ -201,6 +208,21 @@ function App() {
       return
     }
   }
+
+  function applyUiScale(value) {
+    if (typeof document === 'undefined') return
+    const n = Number(value)
+    const scale = Number.isFinite(n) ? Math.max(0.9, Math.min(1.15, n)) : 1
+    document.documentElement.style.setProperty('font-size', `${Math.round(scale * 100)}%`)
+  }
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const theme = String(settings.themeName ?? 'dark')
+    window.localStorage.setItem('wl:theme', theme)
+    applyTheme(theme)
+    applyUiScale(settings.uiScale)
+  }, [settings.themeName, settings.uiScale])
 
   function openUnlockAdmin() {
     if (typeof window === 'undefined') return
@@ -367,26 +389,23 @@ function App() {
 
   const metrics = aggregateMetrics(loadEvents())
 
-  if (content) {
-    return (
-      <Suspense
-        fallback={
-          <div className="min-h-screen bg-zinc-950">
-            <Container className="py-10">
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-6 text-zinc-300">
-                Cargando…
-              </div>
-            </Container>
-          </div>
-        }
-      >
-        {content}
-      </Suspense>
-    )
-  }
-
   return (
     <div className="min-h-screen bg-zinc-950">
+      {content ? (
+        <Suspense
+          fallback={
+            <div className="min-h-screen bg-zinc-950">
+              <Container className="py-10">
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-6 text-zinc-300">
+                  Cargando…
+                </div>
+              </Container>
+            </div>
+          }
+        >
+          {content}
+        </Suspense>
+      ) : (
       <Container className="flex min-h-screen items-center justify-center py-10">
         <div className="w-full max-w-3xl text-center">
           <div className="text-5xl">🚀</div>
@@ -688,13 +707,14 @@ function App() {
           <p className="mt-10 text-xs text-zinc-600">Whitelabel AI — Eficiencia operativa con automatización e IA</p>
         </div>
       </Container>
+      )}
 
       <button
         onClick={() => {
           setShowSettings(true)
           trackEvent('toggle_settings', { open: true })
         }}
-        className="fixed right-5 top-1/2 z-40 inline-flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900/95 text-xl text-zinc-200 shadow-xl transition-colors hover:bg-zinc-800"
+        className="fixed right-5 top-5 z-40 inline-flex h-12 w-12 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900/95 text-xl text-zinc-200 shadow-xl transition-colors hover:bg-zinc-800"
         aria-label="Abrir configuración"
       >
         ⚙️
@@ -738,6 +758,36 @@ function App() {
 
             {settingsTab === 'student' && (
               <div className="grid gap-4">
+                <Card className="p-4 text-left">
+                  <div className="text-xs font-bold tracking-widest text-zinc-500">ESTÉTICA</div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Tema</label>
+                      <select
+                        value={settings.themeName}
+                        onChange={(e) => saveSettings({ themeName: e.target.value })}
+                        className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+                      >
+                        <option value="dark">Dark</option>
+                        <option value="darkBlue">Dark Blue</option>
+                        <option value="light">Light</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Tamaño UI</label>
+                      <select
+                        value={settings.uiScale}
+                        onChange={(e) => saveSettings({ uiScale: Number(e.target.value) })}
+                        className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+                      >
+                        {[0.95, 1, 1.05, 1.1].map((s) => (
+                          <option key={s} value={s}>{Math.round(s * 100)}%</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </Card>
+
                 <Card className="p-4 text-left">
                   <div className="text-xs font-bold tracking-widest text-zinc-500">QUIZ</div>
                   <label className="mt-3 flex cursor-pointer items-center gap-3 text-sm text-zinc-300">
@@ -847,6 +897,91 @@ function App() {
                     <Button variant="secondary" onClick={() => requestClearLocalData('challenges')} disabled={!adminUnlocked}>Borrar retos</Button>
                     <Button variant="secondary" onClick={() => requestClearLocalData('sync')} disabled={!adminUnlocked}>Borrar estado sync</Button>
                   </div>
+                </Card>
+
+                <Card className="p-4 text-left">
+                  <div className="text-xs font-bold tracking-widest text-zinc-500">MÉTRICAS</div>
+                  <div className="mt-2 grid gap-2 text-sm text-zinc-400">
+                    <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2">
+                      <span>Eventos</span>
+                      <span className="font-bold text-zinc-200">{metrics.totalEvents}</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2">
+                      <span>Sesiones únicas</span>
+                      <span className="font-bold text-zinc-200">{metrics.uniqueSessions}</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        if (!adminUnlocked) return
+                        const json = JSON.stringify(loadEvents(), null, 2)
+                        navigator.clipboard?.writeText(json)
+                      }}
+                      disabled={!adminUnlocked}
+                    >
+                      Copiar eventos JSON
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        if (!adminUnlocked) return
+                        const json = JSON.stringify(loadAllProgress(), null, 2)
+                        navigator.clipboard?.writeText(json)
+                      }}
+                      disabled={!adminUnlocked}
+                    >
+                      Copiar progreso JSON
+                    </Button>
+                  </div>
+                </Card>
+
+                <Card className="p-4 text-left">
+                  <div className="text-xs font-bold tracking-widest text-zinc-500">SISTEMA</div>
+                  <div className="mt-2 grid gap-2 text-sm text-zinc-400">
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2">
+                      <div className="text-xs font-bold tracking-widest text-zinc-500">DEVICE</div>
+                      <div className="mt-2 font-mono text-xs text-zinc-200">{typeof window === 'undefined' ? '' : getDeviceId()}</div>
+                    </div>
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2">
+                      <div className="text-xs font-bold tracking-widest text-zinc-500">CERTIFICADO</div>
+                      <div className="mt-2 font-mono text-xs text-zinc-200">{loadCertificate()?.id ?? '—'}</div>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={async () => {
+                        if (!adminUnlocked) return
+                        if (!supabase) return
+                        setSyncing(true)
+                        setSyncMsg('')
+                        try {
+                          const cert = loadCertificate()
+                          await syncDeviceEdge({
+                            deviceId: getDeviceId(),
+                            profile: loadProfile(),
+                            progress: loadAllProgress(),
+                            certificateId: cert?.id ?? null,
+                            events: loadEvents().slice(0, 500),
+                          })
+                          const now = Date.now()
+                          window.localStorage.setItem('api-academy:last-sync', String(now))
+                          setLastSyncAt(now)
+                          setSyncMsg('Sincronizado.')
+                        } catch (e) {
+                          setSyncMsg(e?.message ?? 'No se pudo sincronizar.')
+                        } finally {
+                          setSyncing(false)
+                        }
+                      }}
+                      disabled={!adminUnlocked || syncing || !supabase}
+                    >
+                      {syncing ? 'Sincronizando…' : 'Forzar sync ahora'}
+                    </Button>
+                  </div>
+                  {syncMsg && <div className="mt-3 text-sm text-zinc-500">{syncMsg}</div>}
                 </Card>
               </div>
             )}
