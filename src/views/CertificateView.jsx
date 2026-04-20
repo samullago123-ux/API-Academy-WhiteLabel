@@ -129,10 +129,10 @@ function CertificateContent({ certificate, displayName, progress, levels, prefer
               <circle cx="34" cy="34" r="28" stroke="#c6a344" strokeWidth="2" fill="none"/>
               <circle cx="34" cy="34" r="23" stroke="#c6a344" strokeWidth="0.8" fill="none"/>
               <circle cx="34" cy="34" r="20" stroke="#0f1b3d" strokeWidth="0.5" fill="#0f1b3d"/>
-              <text x="34" y="31" textAnchor="middle" fill="#c6a344"
-                fontSize="7" fontWeight="700" fontFamily="Outfit, sans-serif" letterSpacing="1.5">VERIFIED</text>
-              <text x="34" y="40" textAnchor="middle" fill="#c6a344"
-                fontSize="5" fontWeight="400" fontFamily="Outfit, sans-serif" letterSpacing="1">WHITELABEL</text>
+              <text x="34" y="32" textAnchor="middle" fill="#c6a344"
+                fontSize="6" fontWeight="700" fontFamily="Outfit, sans-serif" letterSpacing="1">VERIFIED</text>
+              <text x="34" y="39" textAnchor="middle" fill="#c6a344"
+                fontSize="4.5" fontWeight="400" fontFamily="Outfit, sans-serif" letterSpacing="0.8">WHITELABEL</text>
             </svg>
           </div>
 

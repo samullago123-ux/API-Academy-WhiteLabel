@@ -457,17 +457,16 @@
 
 .cert-footer {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  gap: clamp(20px, 4%, 50px);
+  gap: 40px;
   width: 100%;
 }
 
 .cert-footer-col {
   text-align: center;
-  width: auto;
-  min-width: 120px;
-  max-width: 150px;
+  width: 160px;
+  flex-shrink: 0;
 }
 
 .cert-footer-line {
@@ -504,15 +503,19 @@
 
 .cert-seal {
   position: relative;
-  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cert-verify-url {
   font-family: 'Outfit', sans-serif;
   font-size: 7px;
   color: #aaa;
-  margin-top: 10px;
+  margin-top: 8px;
   word-break: break-all;
+  text-align: center;
+  max-width: 500px;
 }
 
 .cert-signature-text {
@@ -520,6 +523,7 @@
   font-size: 7px;
   color: #aaa;
   margin-top: 2px;
+  text-align: center;
 }
 
 .cert-brand {
