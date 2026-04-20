@@ -38,9 +38,9 @@ export function saveCertificate(record) {
   window.localStorage.setItem(KEY, JSON.stringify(record))
 }
 
-export async function issueCertificate({ displayName, progress, levels, courseVersion = '1.0.0', public: isPublic = true }) {
+export async function issueCertificate({ displayName, progress, levels, courseVersion = '1.0.0', public: isPublic = true, certificateId }) {
   const issuedAt = Date.now()
-  const id = uuid()
+  const id = String(certificateId ?? '').trim() || uuid()
   const scores = {}
 
   for (const level of levels) {

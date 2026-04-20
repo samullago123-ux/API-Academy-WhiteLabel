@@ -762,14 +762,14 @@ function App() {
           setShowSettings(true)
           trackEvent('toggle_settings', { open: true })
         }}
-        className="fixed right-5 top-5 z-40 inline-flex h-12 w-12 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900/95 text-xl text-zinc-200 shadow-xl transition-colors hover:bg-zinc-800"
+        className="no-print fixed right-5 top-5 z-40 inline-flex h-12 w-12 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900/95 text-xl text-zinc-200 shadow-xl transition-colors hover:bg-zinc-800"
         aria-label="Abrir configuración"
       >
         ⚙️
       </button>
 
       {showSettings && (
-        <div className="fixed inset-0 z-40 bg-zinc-950/75 backdrop-blur-sm">
+        <div className="no-print fixed inset-0 z-40 bg-zinc-950/75 backdrop-blur-sm">
           <div
             className="absolute inset-0"
             onClick={() => {

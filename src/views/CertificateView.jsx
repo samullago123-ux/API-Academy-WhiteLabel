@@ -207,6 +207,7 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
           setRemoteData(res.data)
         } else {
           setRemoteVerified(false)
+          setRemoteError('No encontrado.')
         }
       })
       .catch(() => {
@@ -217,6 +218,7 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
               setRemoteData(data)
             } else {
               setRemoteVerified(false)
+              setRemoteError('No encontrado.')
             }
           })
           .catch((e) => {
@@ -256,7 +258,7 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
     setIssuing(true)
     saveProfile({ displayName: name })
     try {
-      const record = await issueCertificate({ displayName: name, progress, levels, public: makePublic })
+      const record = await issueCertificate({ displayName: name, progress, levels, public: makePublic, certificateId: certificate?.id })
       setCertificate(record)
       trackEvent('certificate_issued', { id: record.id })
 
@@ -429,7 +431,8 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
         )}
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <Card className="no-print p-6">
+          {!verifyId && (
+            <Card className="no-print p-6">
             <div className="text-sm font-extrabold text-zinc-100">Datos del alumno</div>
             <div className="mt-3">
               <label className="mb-2 block text-xs font-bold tracking-widest text-zinc-500">NOMBRE</label>
@@ -560,7 +563,8 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
                 Completá los 3 niveles y alcanzá 60%+ en cada quiz para emitir.
               </div>
             )}
-          </Card>
+            </Card>
+          )}
 
           <Card className="border-0 bg-transparent p-0">
             <div className="no-print border-b border-zinc-800 px-6 py-5">

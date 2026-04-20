@@ -558,9 +558,23 @@
     background: rgb(9 9 11) !important;
     overflow: hidden !important;
   }
+  .print-certificate .min-h-screen {
+    min-height: 0 !important;
+  }
   .print-certificate .certificate-page {
     padding: 0 !important;
     page-break-inside: avoid;
+  }
+  .print-certificate .py-10 {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+  .print-certificate .px-4 {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  .print-certificate .max-w-5xl {
+    max-width: none !important;
   }
   .print-certificate .certificate-print-frame {
     width: 297mm !important;
