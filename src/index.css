@@ -536,6 +536,37 @@
   margin-top: 10px;
 }
 
+@keyframes quizCorrectHit {
+  0% { transform: scale(1); box-shadow: 0 0 0 rgba(16,185,129,0); }
+  35% { transform: scale(1.03); box-shadow: 0 0 0 8px rgba(16,185,129,0.18); }
+  100% { transform: scale(1); box-shadow: 0 0 0 rgba(16,185,129,0); }
+}
+
+.quiz-correct-hit {
+  animation: quizCorrectHit 420ms ease-out;
+}
+
+@keyframes bossIdleFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.boss-idle-float {
+  animation: bossIdleFloat 2s ease-in-out infinite;
+}
+
+@keyframes bossDamageHit {
+  0% { transform: translateX(0) scale(1); filter: drop-shadow(0 0 0 rgba(239,68,68,0)); }
+  20% { transform: translateX(-4px) scale(1.08); filter: drop-shadow(0 0 6px rgba(239,68,68,0.6)); }
+  40% { transform: translateX(4px) scale(0.96); }
+  60% { transform: translateX(-2px) scale(1.04); }
+  100% { transform: translateX(0) scale(1); filter: drop-shadow(0 0 0 rgba(239,68,68,0)); }
+}
+
+.boss-damage-hit {
+  animation: bossDamageHit 280ms ease-in-out;
+}
+
 /* === PRINT === */
 
 .print-only {

@@ -22,6 +22,7 @@ export default function Quiz({
   const [showExplain, setShowExplain] = useState(false);
   const [shuffledOpts, setShuffledOpts] = useState([]);
   const [secondsLeft, setSecondsLeft] = useState(null)
+  const [correctFxIdx, setCorrectFxIdx] = useState(-1)
   const reportedRef = useRef(false)
   const wrongRef = useRef([])
 
@@ -57,11 +58,14 @@ export default function Quiz({
     return () => window.clearTimeout(id)
   }, [secondsLeft, finished])
 
-  function selectAnswer(opt) {
+  function selectAnswer(opt, idx) {
     if (selected !== null) return;
     setSelected(opt);
     setShowExplain(true);
-    if (opt === questions[current].correct) setScore(score + 1);
+    if (opt === questions[current].correct) {
+      setScore(score + 1);
+      setCorrectFxIdx(idx)
+    }
     else wrongRef.current = [...wrongRef.current, questions[current].q]
   }
 
@@ -72,6 +76,7 @@ export default function Quiz({
       setCurrent(current + 1);
       setSelected(null);
       setShowExplain(false);
+      setCorrectFxIdx(-1)
     }
   }
 
@@ -84,6 +89,7 @@ export default function Quiz({
     setScore(0);
     setFinished(false);
     setShowExplain(false);
+    setCorrectFxIdx(-1)
     reportedRef.current = false
     wrongRef.current = []
     setSecondsLeft(typeof timeLimitSec === 'number' ? Math.max(0, Math.floor(timeLimitSec)) : null)
@@ -164,11 +170,12 @@ export default function Quiz({
           return (
             <button
               key={idx}
-              onClick={() => selectAnswer(opt)}
+              onClick={() => selectAnswer(opt, idx)}
               disabled={selected !== null || (secondsLeft !== null && secondsLeft <= 0)}
               className={cn(
                 'rounded-xl border-2 px-4 py-4 text-left text-sm font-medium transition-colors',
                 base,
+                correctFxIdx === idx ? 'quiz-correct-hit' : '',
                 selected !== null ? 'cursor-default opacity-90' : 'hover:bg-zinc-800',
                 opt.includes('{') ? 'font-mono' : 'font-sans',
               )}

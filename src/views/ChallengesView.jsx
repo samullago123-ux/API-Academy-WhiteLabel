@@ -216,12 +216,145 @@ export default function ChallengesView({ onBack }) {
   }
 
   const bossTargets = useMemo(() => ([
-    { label: 'Status 200', check: (res) => res?.status === 200 },
-    { label: 'Status 201', check: (res) => res?.status === 201 },
-    { label: 'Status 401→200', check: (res) => res?.status === 200 },
+    { id: 'debug-200', kind: 'debug', label: 'Debug: lograr status 200', setup: { method: 'GET', endpoint: 'usuarios', authMode: 'bearer', bodyText: '' }, check: (res) => res?.status === 200, damage: 2 },
+    { id: 'json-body', kind: 'json', label: 'Armar JSON válido con nombre y email', setup: { method: 'POST', endpoint: 'usuarios', authMode: 'bearer', bodyText: '{\n  "nombre": "",\n  "email": ""\n}' }, damage: 2 },
+    { id: 'quiz', kind: 'quiz', label: 'Responder una pregunta del programa', damage: 2 },
+    { id: 'detect', kind: 'detect', label: 'Identificar valor en respuesta JSON', setup: { method: 'GET', endpoint: 'usuarios/1', authMode: 'bearer', bodyText: '' }, damage: 2 },
+    { id: 'debug-201', kind: 'debug', label: 'Debug: crear usuario (status 201)', setup: { method: 'POST', endpoint: 'usuarios', authMode: 'bearer', bodyText: '{\n  "nombre": "Boss Slayer"\n}' }, check: (res) => res?.status === 201, damage: 2 },
   ]), [])
   const [bossIdx, setBossIdx] = useState(0)
   const bossTarget = bossTargets[Math.max(0, Math.min(bossTargets.length - 1, bossIdx))]
+  const [bossHp, setBossHp] = useState(10)
+  const [bossRunResult, setBossRunResult] = useState(null)
+  const [bossMessage, setBossMessage] = useState('')
+  const [bossDamageFx, setBossDamageFx] = useState(false)
+  const [bossDetectAnswer, setBossDetectAnswer] = useState('')
+  const [bossQuizIdx, setBossQuizIdx] = useState(0)
+  const [bossQuizChoice, setBossQuizChoice] = useState(null)
+  const [bossSolvedCurrent, setBossSolvedCurrent] = useState(false)
+
+  const bossQuizPool = useMemo(() => {
+    const pool = allQuestions.slice(0, 12)
+    return pool.length ? pool : [{ q: '¿Qué status representa éxito?', opts: ['500', '200', '404'], correct: '200', explain: '200 OK es éxito.' }]
+  }, [allQuestions])
+  const bossQuiz = bossQuizPool[bossQuizIdx % bossQuizPool.length]
+
+  const bossDetectTask = useMemo(() => ({
+    payload: {
+      status: 'ok',
+      service: 'api-academy',
+      level: 'boss',
+      retries: 3,
+      token: 'WL-42',
+    },
+    key: 'token',
+    expected: 'WL-42',
+  }), [])
+
+  useEffect(() => {
+    if (tab !== 'boss') return
+    setMethod(bossTarget?.setup?.method ?? 'GET')
+    setEndpoint(bossTarget?.setup?.endpoint ?? 'usuarios')
+    setAuthMode(bossTarget?.setup?.authMode ?? 'none')
+    setBodyText(bossTarget?.setup?.bodyText ?? '')
+    setBossRunResult(null)
+    setBossDetectAnswer('')
+    setBossQuizChoice(null)
+    setBossSolvedCurrent(false)
+  }, [tab, bossIdx, bossTarget, setMethod, setEndpoint, setAuthMode, setBodyText])
+
+  function applyBossDamage(amount, reason) {
+    setBossDamageFx(true)
+    window.setTimeout(() => setBossDamageFx(false), 280)
+    setBossHp((prev) => {
+      const nextHp = Math.max(0, prev - amount)
+      if (nextHp === 0 && prev > 0) {
+        setStats((prevStats) => {
+          const next = { ...prevStats, xp: prevStats.xp + 120, bossSolved: prevStats.bossSolved + 1 }
+          saveStats(next)
+          return next
+        })
+        trackEvent('boss_solved', { reason })
+      }
+      return nextHp
+    })
+  }
+
+  async function runBossDebug() {
+    setLoading(true)
+    setBossRunResult(null)
+    const headers = {}
+    if (authMode === 'bearer') headers.Authorization = 'Bearer demo_token'
+    if (authMode === 'apikey') headers['X-API-Key'] = 'demo_key'
+    const parsedBody = safeJson(bodyText)
+    const body = parsedBody === '__invalid__' ? '__invalid__' : parsedBody
+    try {
+      if (body === '__invalid__') {
+        const res = { status: 0, statusText: 'Invalid JSON', time: 0, body: { error: 'JSON inválido' } }
+        setBossRunResult(res)
+        setBossMessage('JSON inválido.')
+        return
+      }
+      const res = await simulateAPI(method, endpoint, body, headers)
+      setBossRunResult(res)
+      if (bossTarget.check?.(res)) {
+        if (!bossSolvedCurrent) {
+          setBossSolvedCurrent(true)
+          applyBossDamage(bossTarget.damage ?? 2, bossTarget.id)
+        }
+        setBossMessage('✅ Golpe crítico al jefe.')
+      } else {
+        setBossMessage('❌ El jefe bloqueó tu ataque.')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function runBossJson() {
+    const parsed = safeJson(bodyText)
+    if (parsed === '__invalid__' || !parsed || typeof parsed !== 'object') {
+      setBossMessage('❌ JSON inválido.')
+      return
+    }
+    const ok = String(parsed?.nombre ?? '').trim().length >= 2 && String(parsed?.email ?? '').includes('@')
+    if (ok) {
+      if (!bossSolvedCurrent) {
+        setBossSolvedCurrent(true)
+        applyBossDamage(bossTarget.damage ?? 2, bossTarget.id)
+      }
+      setBossMessage('✅ JSON correcto. Daño aplicado.')
+    } else {
+      setBossMessage('❌ Faltan campos válidos: nombre y email.')
+    }
+  }
+
+  function runBossQuiz() {
+    if (!bossQuizChoice) return
+    if (bossQuizChoice === bossQuiz.correct) {
+      if (!bossSolvedCurrent) {
+        setBossSolvedCurrent(true)
+        applyBossDamage(bossTarget.damage ?? 2, bossTarget.id)
+      }
+      setBossMessage('✅ Respuesta correcta. El jefe recibió daño.')
+    } else {
+      setBossMessage('❌ Respuesta incorrecta.')
+    }
+  }
+
+  function runBossDetect() {
+    const answer = String(bossDetectAnswer ?? '').trim()
+    if (!answer) return
+    if (answer === bossDetectTask.expected) {
+      if (!bossSolvedCurrent) {
+        setBossSolvedCurrent(true)
+        applyBossDamage(bossTarget.damage ?? 2, bossTarget.id)
+      }
+      setBossMessage('✅ Valor identificado correctamente.')
+    } else {
+      setBossMessage('❌ Valor incorrecto.')
+    }
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950">
@@ -358,13 +491,27 @@ export default function ChallengesView({ onBack }) {
           <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
             <Card className="p-6">
               <div className="text-xs font-bold tracking-widest text-red-300">BOSS</div>
-              <div className="mt-2 text-xl font-black text-zinc-100">Reto final de requests</div>
+              <div className="mt-2 text-xl font-black text-zinc-100">Mini jefe multi-actividad</div>
               <div className="mt-2 text-sm leading-relaxed text-zinc-400">
-                Cumplí objetivos consecutivos ajustando método, endpoint, auth y body.
+                Combiná debug, JSON, preguntas y detección de valores para derrotarlo.
+              </div>
+              <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold tracking-widest text-zinc-500">VIDA DEL JEFE</div>
+                  <div className="text-sm font-black text-red-300">{bossHp}/10 HP</div>
+                </div>
+                <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-zinc-800">
+                  <div
+                    className="h-full bg-gradient-to-r from-red-500 via-amber-400 to-emerald-400 transition-all duration-300"
+                    style={{ width: `${Math.max(0, Math.min(100, (bossHp / 10) * 100))}%` }}
+                  />
+                </div>
               </div>
               <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
                 <div className="text-xs font-bold tracking-widest text-zinc-500">OBJETIVO</div>
-                <div className="mt-2 text-sm font-bold text-zinc-200">{bossTarget.label}</div>
+                <div className="mt-2 text-sm font-bold text-zinc-200">
+                  {bossIdx + 1}/{bossTargets.length} · {bossTarget.label}
+                </div>
                 <div className="mt-2 text-xs text-zinc-500">Completados: {stats.bossSolved}</div>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
@@ -372,7 +519,11 @@ export default function ChallengesView({ onBack }) {
                   variant="secondary"
                   onClick={() => {
                     setBossIdx(0)
-                    setResult(null)
+                    setBossHp(10)
+                    setBossRunResult(null)
+                    setBossMessage('')
+                    setBossSolvedCurrent(false)
+                    setBossQuizIdx((v) => v + 1)
                     setShowHint(false)
                     setMethod('GET')
                     setEndpoint('usuarios')
@@ -391,7 +542,7 @@ export default function ChallengesView({ onBack }) {
               </div>
               {showHint && (
                 <div className="mt-3 rounded-xl border border-indigo-400/30 bg-indigo-500/10 px-4 py-3 text-sm text-indigo-200">
-                  Pista: probá <span className="font-mono">GET usuarios</span> para 200, y <span className="font-mono">POST usuarios</span> con body válido para 201.
+                  Pista: completá la acción actual para hacer daño. Cada acierto resta 2 HP.
                 </div>
               )}
             </Card>
@@ -400,105 +551,162 @@ export default function ChallengesView({ onBack }) {
                 <div className="text-sm font-extrabold text-zinc-100">Arena</div>
                 <Badge color="red">Boss</Badge>
               </div>
+              <div className="mb-4 flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3">
+                <div className={`text-5xl ${bossDamageFx ? 'boss-damage-hit' : 'boss-idle-float'}`}>👹</div>
+                <div className="text-right">
+                  <div className="text-xs font-bold tracking-widest text-zinc-500">ESTADO</div>
+                  <div className={`mt-1 text-sm font-bold ${bossHp > 0 ? 'text-zinc-200' : 'text-emerald-300'}`}>
+                    {bossHp > 0 ? 'En combate' : 'Derrotado'}
+                  </div>
+                </div>
+              </div>
+
               <div className="grid gap-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <div className="mb-2 text-xs font-bold tracking-widest text-zinc-500">MÉTODO</div>
-                    <select
-                      value={method}
-                      onChange={(e) => setMethod(e.target.value)}
-                      className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
-                    >
-                      {['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map((m) => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <div className="mb-2 text-xs font-bold tracking-widest text-zinc-500">AUTH</div>
-                    <select
-                      value={authMode}
-                      onChange={(e) => setAuthMode(e.target.value)}
-                      className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
-                    >
-                      <option value="none">None</option>
-                      <option value="bearer">Bearer</option>
-                      <option value="apikey">API Key</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <div className="mb-2 text-xs font-bold tracking-widest text-zinc-500">ENDPOINT</div>
-                  <input
-                    value={endpoint}
-                    onChange={(e) => setEndpoint(e.target.value)}
-                    className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
-                    placeholder="usuarios o usuarios/1"
-                  />
-                </div>
-                <div>
-                  <div className="mb-2 text-xs font-bold tracking-widest text-zinc-500">BODY (JSON)</div>
-                  <textarea
-                    value={bodyText}
-                    onChange={(e) => setBodyText(e.target.value)}
-                    className="min-h-28 w-full resize-y rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-xs leading-relaxed text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
-                    spellCheck={false}
-                  />
-                </div>
-                <Button
-                  onClick={async () => {
-                    const res = await run()
-                    if (bossTarget.check(res)) trackEvent('boss_target_ok', { target: bossTarget.label })
-                  }}
-                  disabled={loading}
-                >
-                  {loading ? '⏳ Ejecutando...' : '▶ Ejecutar'}
-                </Button>
-                {result && (
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                    <div className="mb-2 flex items-center justify-between">
-                      <div className="font-mono text-sm font-bold text-zinc-200">
-                        {result.status} {result.statusText}
-                      </div>
-                      <div className="text-xs text-zinc-600">{Math.round(result.time ?? 0)}ms</div>
-                    </div>
-                    {bossTarget.check(result) ? (
-                      <div className="mb-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-300">
-                        ✅ Objetivo completado
-                      </div>
-                    ) : (
-                      <div className="mb-3 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-300">
-                        ❌ No cumple el objetivo
-                      </div>
-                    )}
-                    <pre className="m-0 whitespace-pre-wrap font-mono text-xs leading-relaxed text-zinc-400">
-                      {JSON.stringify(result.body, null, 2)}
-                    </pre>
-                    {bossTarget.check(result) && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Button
-                          onClick={() => {
-                            const nextIdx = Math.min(bossTargets.length - 1, bossIdx + 1)
-                            if (nextIdx === bossIdx) {
-                              setStats((prev) => {
-                                const next = { ...prev, xp: prev.xp + 60, bossSolved: prev.bossSolved + 1 }
-                                saveStats(next)
-                                return next
-                              })
-                              trackEvent('boss_solved')
-                              setBossIdx(0)
-                            } else {
-                              setBossIdx(nextIdx)
-                            }
-                            setResult(null)
-                          }}
+                {bossTarget.kind === 'debug' && (
+                  <>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <div className="mb-2 text-xs font-bold tracking-widest text-zinc-500">MÉTODO</div>
+                        <select
+                          value={method}
+                          onChange={(e) => setMethod(e.target.value)}
+                          className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
                         >
-                          Siguiente objetivo →
-                        </Button>
+                          {['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map((m) => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <div className="mb-2 text-xs font-bold tracking-widest text-zinc-500">AUTH</div>
+                        <select
+                          value={authMode}
+                          onChange={(e) => setAuthMode(e.target.value)}
+                          className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+                        >
+                          <option value="none">None</option>
+                          <option value="bearer">Bearer</option>
+                          <option value="apikey">API Key</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="mb-2 text-xs font-bold tracking-widest text-zinc-500">ENDPOINT</div>
+                      <input
+                        value={endpoint}
+                        onChange={(e) => setEndpoint(e.target.value)}
+                        className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+                        placeholder="usuarios o usuarios/1"
+                      />
+                    </div>
+                    <div>
+                      <div className="mb-2 text-xs font-bold tracking-widest text-zinc-500">BODY (JSON)</div>
+                      <textarea
+                        value={bodyText}
+                        onChange={(e) => setBodyText(e.target.value)}
+                        className="min-h-28 w-full resize-y rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-xs leading-relaxed text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+                        spellCheck={false}
+                      />
+                    </div>
+                    <Button onClick={runBossDebug} disabled={loading || bossHp <= 0}>
+                      {loading ? '⏳ Ejecutando...' : '▶ Ejecutar ataque debug'}
+                    </Button>
+                    {bossRunResult && (
+                      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+                        <div className="mb-2 flex items-center justify-between">
+                          <div className="font-mono text-sm font-bold text-zinc-200">{bossRunResult.status} {bossRunResult.statusText}</div>
+                          <div className="text-xs text-zinc-600">{Math.round(bossRunResult.time ?? 0)}ms</div>
+                        </div>
+                        <pre className="m-0 whitespace-pre-wrap font-mono text-xs leading-relaxed text-zinc-400">
+                          {JSON.stringify(bossRunResult.body, null, 2)}
+                        </pre>
                       </div>
                     )}
+                  </>
+                )}
+
+                {bossTarget.kind === 'json' && (
+                  <>
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-400">
+                      Crea un JSON con <span className="font-mono text-zinc-200">nombre</span> y <span className="font-mono text-zinc-200">email</span>.
+                    </div>
+                    <textarea
+                      value={bodyText}
+                      onChange={(e) => setBodyText(e.target.value)}
+                      className="min-h-32 w-full resize-y rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-xs leading-relaxed text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+                      spellCheck={false}
+                    />
+                    <Button onClick={runBossJson} disabled={bossHp <= 0}>⚔️ Validar JSON</Button>
+                  </>
+                )}
+
+                {bossTarget.kind === 'quiz' && bossQuiz && (
+                  <>
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-bold text-zinc-100">{bossQuiz.q}</div>
+                    <div className="grid gap-2">
+                      {bossQuiz.opts.map((opt, idx) => (
+                        <button
+                          key={`${bossQuiz.q}-${idx}`}
+                          onClick={() => setBossQuizChoice(opt)}
+                          className={`rounded-xl border px-4 py-3 text-left text-sm ${
+                            bossQuizChoice === opt
+                              ? 'border-indigo-400 bg-indigo-500/10 text-indigo-200'
+                              : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:bg-zinc-900'
+                          }`}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                    <Button onClick={runBossQuiz} disabled={!bossQuizChoice || bossHp <= 0}>⚔️ Responder</Button>
+                  </>
+                )}
+
+                {bossTarget.kind === 'detect' && (
+                  <>
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-400">
+                      Identifica el valor de <span className="font-mono text-zinc-200">{bossDetectTask.key}</span>.
+                    </div>
+                    <pre className="m-0 whitespace-pre-wrap rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 font-mono text-xs leading-relaxed text-zinc-300">
+                      {JSON.stringify(bossDetectTask.payload, null, 2)}
+                    </pre>
+                    <input
+                      value={bossDetectAnswer}
+                      onChange={(e) => setBossDetectAnswer(e.target.value)}
+                      className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+                      placeholder={`Valor de ${bossDetectTask.key}`}
+                    />
+                    <Button onClick={runBossDetect} disabled={!bossDetectAnswer.trim() || bossHp <= 0}>⚔️ Validar valor</Button>
+                  </>
+                )}
+
+                {bossMessage && (
+                  <div className={`rounded-xl border px-4 py-3 text-sm font-bold ${
+                    bossMessage.startsWith('✅')
+                      ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
+                      : 'border-red-400/30 bg-red-500/10 text-red-300'
+                  }`}>
+                    {bossMessage}
                   </div>
                 )}
+
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="secondary"
+                    disabled={!bossSolvedCurrent || bossHp <= 0}
+                    onClick={() => {
+                      setBossSolvedCurrent(false)
+                      setBossMessage('')
+                      setBossRunResult(null)
+                      setBossDetectAnswer('')
+                      setBossQuizChoice(null)
+                      setBossQuizIdx((v) => v + 1)
+                      setBossIdx((idx) => (idx + 1 >= bossTargets.length ? 0 : idx + 1))
+                    }}
+                  >
+                    Siguiente fase →
+                  </Button>
+                </div>
               </div>
             </Card>
           </div>
