@@ -2,12 +2,12 @@ import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import { Badge, Button, Card, Container, Modal, Tabs } from './components/ui'
-import { loadAllProgress, saveLabProgress } from './services/progressStore.js'
+import { loadAllProgress, saveAllProgress, saveLabProgress } from './services/progressStore.js'
 import { aggregateMetrics, clearEvents, loadEvents, trackEvent } from './services/analytics.js'
 import { applyTheme, initTheme } from './theme/theme.js'
 import { supabase } from './services/supabaseClient.js'
 import { loadCertificate } from './services/certificateStore.js'
-import { loadProfile } from './services/profileStore.js'
+import { loadProfile, saveProfile } from './services/profileStore.js'
 import { getDeviceId } from './services/deviceId.js'
 import { syncDeviceEdge } from './services/edgeFunctions.js'
 
@@ -174,6 +174,7 @@ function App() {
   const [adminUnlocked, setAdminUnlocked] = useState(false)
   const [pinModal, setPinModal] = useState({ open: false, mode: null, pin1: '', pin2: '', error: '' })
   const [dangerModal, setDangerModal] = useState({ open: false, kind: null })
+  const [quickUnlockModal, setQuickUnlockModal] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
   const [lastSyncAt, setLastSyncAt] = useState(() => {
@@ -293,6 +294,53 @@ function App() {
     if (kind === 'sync') window.localStorage.removeItem('api-academy:last-sync')
     setDangerModal({ open: false, kind: null })
     window.location.reload()
+  }
+
+  function quickUnlockAll() {
+    if (typeof window === 'undefined') return
+    if (!adminUnlocked) return
+
+    const now = Date.now()
+    const prev = loadAllProgress()
+    const next = { ...(prev && typeof prev === 'object' ? prev : {}) }
+
+    for (const level of LEVELS) {
+      const visited = Array.isArray(level?.lessons) ? level.lessons.map((l) => l.id) : []
+      const total = 20
+      const pct = 92
+      const score = Math.round((pct / 100) * total)
+      const attempt = { score, total, pct, at: now, wrongQuestions: [] }
+      const existing = next?.[level.hash] && typeof next[level.hash] === 'object' ? next[level.hash] : {}
+      next[level.hash] = {
+        ...existing,
+        activeLesson: 'quiz',
+        visited,
+        quiz: {
+          ...(existing.quiz ?? {}),
+          lastPct: pct,
+          bestPct: Math.max(Number(existing?.quiz?.bestPct ?? 0), pct),
+          lastAt: now,
+          history: [attempt, ...(Array.isArray(existing?.quiz?.history) ? existing.quiz.history : [])].slice(0, 20),
+        },
+      }
+    }
+
+    saveAllProgress(next)
+    try {
+      window.localStorage.setItem('api-academy-challenges:v1', JSON.stringify({
+        xp: 999,
+        debugSolved: ['0', '1', '2'],
+        bestSpeed: 88,
+        bestDaily: 90,
+        bossSolved: 3,
+      }))
+    } catch {
+      return
+    }
+    saveProfile({ displayName: loadProfile().displayName || 'Admin Demo' })
+    setShowSettings(false)
+    setSettingsTab('student')
+    window.location.hash = '#certificate'
   }
 
   useEffect(() => {
@@ -888,6 +936,19 @@ function App() {
                 </Card>
 
                 <Card className="p-4 text-left">
+                  <div className="text-xs font-bold tracking-widest text-zinc-500">ATAJOS</div>
+                  <div className="mt-2 text-sm text-zinc-400">Completa progreso local para acceder al certificado rápido.</div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => setQuickUnlockModal(true)}
+                      disabled={!adminUnlocked}
+                    >
+                      Completar curso y abrir certificado
+                    </Button>
+                  </div>
+                </Card>
+
+                <Card className="p-4 text-left">
                   <div className="text-xs font-bold tracking-widest text-zinc-500">ACCIONES DE DATOS</div>
                   <div className="mt-2 text-sm text-zinc-400">Borrado local por categorías (requiere modo admin).</div>
                   <div className="mt-4 flex flex-wrap gap-2">
@@ -1042,6 +1103,31 @@ function App() {
       >
         <div className="text-sm text-zinc-400">
           Se eliminará: <span className="font-bold text-zinc-200">{String(dangerModal.kind ?? '')}</span>
+        </div>
+      </Modal>
+
+      <Modal
+        open={quickUnlockModal}
+        title="Completar curso (admin)"
+        description="Esto marca niveles y quizzes como completados en este dispositivo y te lleva al certificado."
+        onClose={() => setQuickUnlockModal(false)}
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setQuickUnlockModal(false)}>Cancelar</Button>
+            <Button
+              onClick={() => {
+                setQuickUnlockModal(false)
+                quickUnlockAll()
+              }}
+              disabled={!adminUnlocked}
+            >
+              Aplicar y abrir
+            </Button>
+          </>
+        }
+      >
+        <div className="text-sm text-zinc-400">
+          Solo afecta datos locales (progreso, retos). No emite el certificado automáticamente.
         </div>
       </Modal>
     </div>
