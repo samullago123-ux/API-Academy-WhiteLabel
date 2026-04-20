@@ -190,10 +190,14 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
 
   useEffect(() => {
     if (!verifyId) return
-    if (!supabase) return
     setRemoteVerified(null)
     setRemoteData(null)
     setRemoteError('')
+    if (!supabase) {
+      setRemoteVerified(false)
+      setRemoteError('Supabase no está configurado. No se puede verificar este certificado.')
+      return
+    }
 
     verifyCertificateEdge(verifyId)
       .then((res) => {
@@ -222,6 +226,22 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
   }, [verifyId])
 
   const eligible = useMemo(() => isCertificateEligible({ progress, levels, minPct: 60 }), [progress, levels])
+
+  const displayCertificate = useMemo(() => {
+    if (verifyId && remoteVerified === true && remoteData) {
+      return {
+        id: remoteData.certificateId ?? verifyId,
+        issuedAt: remoteData.issuedAt,
+        courseVersion: remoteData.courseVersion,
+        displayName: remoteData.displayName,
+        public: true,
+        scores: remoteData.scores ?? {},
+        signature: remoteData.signature ?? '',
+      }
+    }
+    return certificate
+  }, [verifyId, remoteVerified, remoteData, certificate])
+
   const verified = useMemo(() => {
     if (!verifyId) return null
     if (remoteVerified === true) return true
@@ -271,16 +291,19 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
       } catch (e) {
         trackEvent('device_sync_failed', { error: e?.message ?? 'unknown' })
       }
+    } catch (e) {
+      setShareMsg(e?.message ?? 'No se pudo emitir el certificado.')
     } finally {
       setIssuing(false)
     }
   }
 
   const shareUrl = useMemo(() => {
+    if (verifyId && remoteVerified === true && remoteData?.shareUrl) return String(remoteData.shareUrl)
     if (!certificate?.id) return ''
     if (typeof window === 'undefined') return `?verify=${certificate.id}`
     return `${window.location.origin}/?verify=${certificate.id}`
-  }, [certificate?.id])
+  }, [verifyId, remoteVerified, remoteData?.shareUrl, certificate?.id])
 
   const verifyLink = useMemo(() => {
     if (!verifyId) return ''
@@ -323,6 +346,9 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
     setPublishing(true)
     setShareMsg('')
     try {
+      const nextCert = { ...certificate, public: makePublic }
+      setCertificate(nextCert)
+      saveCertificate(nextCert)
       const res = await issueCertificateEdge({
         certificateId: certificate.id,
         issuedAt: certificate.issuedAt,
@@ -330,10 +356,10 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
         courseVersion: certificate.courseVersion,
         scores: certificate.scores,
         signature: certificate.signature,
-        public: certificate.public === true,
+        public: makePublic === true,
       })
       if (res?.ok !== true) throw new Error('No se pudo guardar el certificado en Supabase.')
-      saveCertificate(certificate)
+      saveCertificate(nextCert)
       setShareMsg('Certificado guardado en Supabase. El link ya es validable.')
       trackEvent('certificate_publish')
     } catch (e) {
@@ -359,7 +385,7 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
                 trackEvent('certificate_print')
                 window.print()
               }}
-              disabled={!certificate}
+              disabled={!displayCertificate}
             >
               Descargar PDF
             </Button>
@@ -443,7 +469,15 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
                 <input
                   type="checkbox"
                   checked={makePublic}
-                  onChange={(e) => setMakePublic(e.target.checked)}
+                  onChange={(e) => {
+                    const next = e.target.checked
+                    setMakePublic(next)
+                    if (certificate) {
+                      const updated = { ...certificate, public: next }
+                      setCertificate(updated)
+                      saveCertificate(updated)
+                    }
+                  }}
                   className="h-4 w-4 rounded border-zinc-700 bg-zinc-950 text-indigo-500"
                 />
                 Hacer público este certificado (para validar con link)
@@ -472,13 +506,19 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
                     <a
                       href={linkedinShareUrl}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       onClick={() => trackEvent('share_linkedin')}
                       className="inline-flex h-10 items-center justify-center rounded-xl bg-indigo-500 px-4 text-sm font-bold text-white transition-colors hover:bg-indigo-400"
                     >
                       Compartir en LinkedIn
                     </a>
-                    <Button variant="ghost" onClick={() => window.open(shareUrl, '_blank', 'noreferrer')}>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        const w = window.open(shareUrl, '_blank', 'noopener,noreferrer')
+                        if (!w) setShareMsg('El navegador bloqueó la ventana. Usá “Copiar link”.')
+                      }}
+                    >
                       Abrir
                     </Button>
                     <Button variant="ghost" onClick={publishToSupabase} disabled={publishing || !makePublic}>
@@ -534,7 +574,7 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
               <div className="certificate-screen-frame cert-frame">
                 <div ref={certFrameRef} className="certificate-screen-canvas">
                   <CertificateContent
-                    certificate={certificate}
+                    certificate={displayCertificate}
                     displayName={displayName}
                     progress={progress}
                     levels={levels}
@@ -548,7 +588,7 @@ export default function CertificateView({ progress, levels, onBack, verifyId }) 
               <div className="certificate-print-frame cert-frame">
                 <div className="certificate-print-canvas">
                   <CertificateContent
-                    certificate={certificate}
+                    certificate={displayCertificate}
                     displayName={displayName}
                     progress={progress}
                     levels={levels}
