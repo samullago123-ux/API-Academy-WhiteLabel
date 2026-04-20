@@ -24,6 +24,25 @@ export default function LabLayout({
   const progress = lessons.length ? (visited.length / lessons.length) * 100 : 0
   const currentLesson = lessons[Math.max(0, currentIdx)] ?? lessons[0]
 
+  function shouldConfirmLeaveQuiz() {
+    if (typeof window === 'undefined') return false
+    try {
+      const raw = window.localStorage.getItem('api-academy-settings:v1')
+      const parsed = raw ? JSON.parse(raw) : null
+      return (parsed?.confirmLeaveQuiz ?? true) === true
+    } catch {
+      return true
+    }
+  }
+
+  function guardedNavigate(nextId) {
+    if (activeLesson === 'quiz' && typeof window !== 'undefined' && window.__aaQuizInProgress && shouldConfirmLeaveQuiz()) {
+      const ok = window.confirm('Si sales del quiz ahora, se va a borrar tu progreso actual. ¿Quieres continuar?')
+      if (!ok) return
+    }
+    onNavigate(nextId)
+  }
+
   return (
     <div className="min-h-screen">
       <div className="border-b border-zinc-800 bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900/20 py-5">
@@ -48,7 +67,7 @@ export default function LabLayout({
       </div>
 
       <Container className="py-5">
-        <Tabs value={activeLesson} onValueChange={onNavigate} items={items} className="mb-5" />
+        <Tabs value={activeLesson} onValueChange={guardedNavigate} items={items} className="mb-5" />
 
         <Card>
           <CardHeader>
@@ -64,13 +83,13 @@ export default function LabLayout({
         <div className="mt-4 flex items-center justify-between gap-3">
           <Button
             variant="secondary"
-            onClick={() => onNavigate(lessons[Math.max(0, currentIdx - 1)].id)}
+            onClick={() => guardedNavigate(lessons[Math.max(0, currentIdx - 1)].id)}
             disabled={currentIdx <= 0}
           >
             ← Anterior
           </Button>
           <Button
-            onClick={() => onNavigate(lessons[Math.min(lessons.length - 1, currentIdx + 1)].id)}
+            onClick={() => guardedNavigate(lessons[Math.min(lessons.length - 1, currentIdx + 1)].id)}
             disabled={currentIdx >= lessons.length - 1}
           >
             Siguiente →

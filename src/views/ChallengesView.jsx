@@ -69,6 +69,41 @@ export default function ChallengesView({ onBack }) {
   const [stats, setStats] = useState(() => loadStats())
   const [showHint, setShowHint] = useState(false)
 
+  function loadSettings() {
+    if (typeof window === 'undefined') return { confirmLeaveQuiz: true, dailyMode: 'wrong', speedTimeLimitSec: 60, speedQuestionCount: 10 }
+    try {
+      const raw = window.localStorage.getItem('api-academy-settings:v1')
+      const parsed = raw ? JSON.parse(raw) : null
+      return {
+        confirmLeaveQuiz: (parsed?.confirmLeaveQuiz ?? true) === true,
+        dailyMode: parsed?.dailyMode === 'mixed' ? 'mixed' : 'wrong',
+        speedTimeLimitSec: Number(parsed?.speedTimeLimitSec ?? 60),
+        speedQuestionCount: Number(parsed?.speedQuestionCount ?? 10),
+      }
+    } catch {
+      return { confirmLeaveQuiz: true, dailyMode: 'wrong', speedTimeLimitSec: 60, speedQuestionCount: 10 }
+    }
+  }
+
+  const settings = loadSettings()
+
+  function confirmLoseQuizProgress() {
+    if (typeof window === 'undefined') return true
+    if (!settings.confirmLeaveQuiz) return true
+    if (!window.__aaQuizInProgress) return true
+    return window.confirm('Si sales del quiz ahora, se va a borrar tu progreso actual. ¿Quieres continuar?')
+  }
+
+  function guardedBack() {
+    if (!confirmLoseQuizProgress()) return
+    onBack?.()
+  }
+
+  function guardedSetTab(nextTab) {
+    if (!confirmLoseQuizProgress()) return
+    setTab(nextTab)
+  }
+
   const [method, setMethod] = useState('GET')
   const [endpoint, setEndpoint] = useState('usuarios')
   const [authMode, setAuthMode] = useState('bearer')
@@ -134,8 +169,9 @@ export default function ChallengesView({ onBack }) {
     }
     const wrongSet = new Set(wrong)
     const pool = allQuestions.filter((q) => wrongSet.has(q.q))
+    if (settings.dailyMode === 'mixed') return allQuestions
     return pool.length ? pool : allQuestions
-  }, [allQuestions])
+  }, [allQuestions, settings.dailyMode])
 
   async function run() {
     setLoading(true)
@@ -185,7 +221,7 @@ export default function ChallengesView({ onBack }) {
       <Container className="py-10">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <BrandMark />
-          <Button variant="secondary" onClick={onBack}>← Volver</Button>
+          <Button variant="secondary" onClick={guardedBack}>← Volver</Button>
         </div>
 
         <Card className="mb-6 overflow-hidden">
@@ -210,7 +246,7 @@ export default function ChallengesView({ onBack }) {
           </div>
         </Card>
 
-        <Tabs value={tab} onValueChange={setTab} items={TAB_ITEMS} className="mb-5" />
+        <Tabs value={tab} onValueChange={guardedSetTab} items={TAB_ITEMS} className="mb-5" />
 
         {tab === 'daily' && (
           <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
@@ -267,7 +303,7 @@ export default function ChallengesView({ onBack }) {
               <div className="text-xs font-bold tracking-widest text-amber-300">SPEED</div>
               <div className="mt-2 text-xl font-black text-zinc-100">Velocidad + precisión</div>
               <div className="mt-2 text-sm leading-relaxed text-zinc-400">
-                Tenés 60 segundos. Respondé rápido y sin perder calidad.
+                Tenés {settings.speedTimeLimitSec} segundos. Respondé rápido y sin perder calidad.
               </div>
               <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
                 <div className="text-xs font-bold tracking-widest text-zinc-500">RECOMPENSA</div>
@@ -281,12 +317,12 @@ export default function ChallengesView({ onBack }) {
             <Card className="p-6">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                 <div className="text-sm font-extrabold text-zinc-100">Speed Quiz</div>
-                <Badge color="amber">60s · 10 preguntas</Badge>
+                <Badge color="amber">{settings.speedTimeLimitSec}s · {settings.speedQuestionCount} preguntas</Badge>
               </div>
               <Quiz
                 questionsBank={allQuestions}
-                questionCount={10}
-                timeLimitSec={60}
+                questionCount={settings.speedQuestionCount}
+                timeLimitSec={settings.speedTimeLimitSec}
                 messages={{
                   high: 'Rápido y preciso.',
                   medium: 'Buen ritmo. Ajustá los errores.',

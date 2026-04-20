@@ -26,6 +26,14 @@ export default function Quiz({
   const wrongRef = useRef([])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.__aaQuizInProgress = !finished
+    return () => {
+      window.__aaQuizInProgress = false
+    }
+  }, [finished])
+
+  useEffect(() => {
     const q = shuffle(questionsBank).slice(0, questionCount);
     setQuestions(q);
     if (q[0]) setShuffledOpts(shuffle(q[0].opts));
